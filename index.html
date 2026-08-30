@@ -38,9 +38,7 @@
             cursor: pointer;
         }
         
-        .nav-tab:hover {
-            background-color: #e2e8f0;
-        }
+        .nav-tab:hover { background-color: #e2e8f0; }
         
         .nav-tab.active {
             background-color: white;
@@ -64,12 +62,7 @@
             border-top: none;
         }
 
-        table.fixed-table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed; 
-        }
-
+        table.fixed-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         table.fixed-table th, table.fixed-table td {
             border: 1px solid #cbd5e1;
             text-align: center;
@@ -79,90 +72,70 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-
         table.fixed-table th {
-            position: sticky;
-            top: 0;
-            background-color: #bfdbfe;
-            color: #1e3a8a !important;
-            font-weight: 800 !important;
-            font-size: 14px;
-            z-index: 10;
-            padding: 10px 4px;
+            position: sticky; top: 0; background-color: #bfdbfe; color: #1e3a8a !important;
+            font-weight: 800 !important; font-size: 14px; z-index: 10; padding: 10px 4px;
         }
 
-        table.master-table {
-            width: max-content;
-            min-width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            table-layout: fixed;
-        }
+        /* 總表專用樣式 */
+        table.master-table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
         table.master-table th, table.master-table td {
-            border-right: 1px solid #cbd5e1;
-            border-bottom: 1px solid #cbd5e1;
-            text-align: center;
-            vertical-align: middle;
-            padding: 4px;
-            box-sizing: border-box;
+            border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1;
+            text-align: center; vertical-align: middle; padding: 4px; box-sizing: border-box;
         }
         table.master-table th {
-            position: sticky;
-            top: 0;
-            background-color: #bfdbfe;
-            color: #1e3a8a !important;
-            font-weight: 800 !important;
-            font-size: 13px;
-            z-index: 10;
-            white-space: nowrap;
-            padding: 10px 4px;
+            position: sticky; top: 0; background-color: #bfdbfe; color: #1e3a8a !important;
+            font-weight: 800 !important; font-size: 13px; z-index: 10; white-space: nowrap; padding: 10px 4px;
         }
         table.master-table th.col-date, table.master-table td.col-date {
-            width: 110px;
-            min-width: 110px;
-            max-width: 110px;
-            position: sticky;
-            left: 0;
-            background-color: #f1f5f9;
-            z-index: 5;
-            font-weight: 600;
+            width: 110px; min-width: 110px; max-width: 110px; position: sticky; left: 0;
+            background-color: #f1f5f9; z-index: 5; font-weight: 600;
         }
-        table.master-table th.col-date {
-            z-index: 15;
-            background-color: #93c5fd;
-        }
-        table.master-table .col-std {
-            width: 90px;
-            min-width: 90px;
-            max-width: 90px;
-        }
+        table.master-table th.col-date { z-index: 15; background-color: #93c5fd; }
+        table.master-table .col-std { width: 90px; min-width: 90px; max-width: 90px; }
 
         input.cell-input {
-            width: 100%;
-            max-width: 78px;
-            padding: 4px;
-            border: 1px solid #cbd5e1;
-            border-radius: 4px;
-            text-align: center;
-            font-size: 13px;
-            background-color: #ffffff;
-            margin: 0 auto;
-            display: block;
+            width: 100%; max-width: 78px; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px;
+            text-align: center; font-size: 13px; background-color: #ffffff; margin: 0 auto; display: block;
         }
-        input.cell-input:focus {
-            outline: none;
-            border-color: #2563eb;
-            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
-            background-color: #eff6ff;
-        }
+        input.cell-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2); background-color: #eff6ff; }
 
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 50; justify-content: center; align-items: center; padding: 16px; backdrop-filter: blur(4px); }
-        .modal.active { display: flex; }
+        /* Custom Toast Notification 提示框 */
+        #toast-container {
+            position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;
+        }
+        .toast {
+            background-color: #333; color: white; padding: 12px 24px; border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px;
+            transform: translateX(120%); transition: transform 0.3s ease-out; font-weight: 600;
+        }
+        .toast.show { transform: translateX(0); }
+        .toast.success { background-color: #10b981; }
+        .toast.error { background-color: #ef4444; }
+        .toast.loading { background-color: #3b82f6; }
+
+        /* 讀取畫面疊加層 */
+        #loading-overlay {
+            position: fixed; inset: 0; background: rgba(255,255,255,0.8); z-index: 9998;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1); border-left-color: #2563eb;
+            border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="text-gray-800">
 
-    <!-- 主系統導覽列 -->
+    <!-- 讀取中遮罩 -->
+    <div id="loading-overlay" style="display: none;">
+        <div class="spinner mb-4"></div>
+        <p class="text-lg font-bold text-blue-600" id="loading-text">雲端資料同步中...</p>
+    </div>
+
+    <div id="toast-container"></div>
+
     <nav class="bg-white shadow-sm border-b border-gray-200" id="mainNav">
         <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
@@ -172,24 +145,28 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                     </div>
-                    <span class="font-bold text-xl text-gray-800">智慧收尾用量系統 (115年8月份)</span>
+                    <span class="font-bold text-xl text-gray-800">智慧收尾用量系統 <span class="text-sm font-normal text-gray-500 ml-2">(雲端版)</span></span>
+                </div>
+                <div>
+                    <!-- 新增手動同步按鈕 -->
+                    <button onclick="fetchDataFromCloud()" class="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-lg shadow-sm text-sm font-bold flex items-center gap-1 transition-colors">
+                        🔄 抓取最新資料
+                    </button>
                 </div>
             </div>
         </div>
     </nav>
 
-    <!-- 主系統內容區 -->
     <div class="max-w-[1600px] mx-auto p-4 md:p-6" id="mainContainer">
         <div class="nav-tabs-container" id="navTabsContainer"></div>
         <div id="tabsContentContainer"></div>
     </div>
 
-    <!-- 現場工作人員專用：極簡填報畫面 (掃描 QR 碼後直接覆蓋全螢幕，無返回後台按鈕) -->
     <div id="fieldWorkerView" class="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center p-4" style="display: none;">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md text-center">
             <div class="bg-blue-600 p-4 rounded-xl text-white mb-6">
-                <h2 class="text-2xl font-bold" id="field-device-title">蒸氣高燃鍋爐</h2>
-                <p class="text-sm text-blue-100 mt-1">現場數據快速填報</p>
+                <h2 class="text-2xl font-bold" id="field-device-title">載入中...</h2>
+                <p class="text-sm text-blue-100 mt-1">現場數據雲端直傳</p>
             </div>
             
             <div class="mb-4 text-left">
@@ -201,21 +178,27 @@
 
             <div class="mb-6 text-left">
                 <label class="block text-sm font-bold text-gray-700 mb-1" id="field-input-label">📝 輸入讀數：</label>
-                <input type="text" id="fieldValueInput" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="例: 11860:46">
+                <input type="number" step="0.01" id="fieldValueInput" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="例: 11860.46">
+                <p class="text-xs text-gray-500 mt-1">* 為了計算正確，請輸入小數點取代冒號 (例如 11860:46 請輸入 11860.46)</p>
             </div>
 
-            <button onclick="submitFieldData()" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg shadow-lg mb-2">
+            <button id="fieldSubmitBtn" onclick="submitFieldData()" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg shadow-lg mb-2 transition-colors">
                 ✅ 確認送出寫入
             </button>
         </div>
     </div>
 
     <script>
+        // ==========================================
+        // ⚠️ 關鍵設定：請在這裡填入您部署 Google Apps Script 的網址
+        // ==========================================
+        const SCRIPT_URL = '請將您部署後的_Google_Apps_Script_網址貼在這裡'; 
+
         const dates = [];
         for (let d = 1; d <= 31; d++) {
             const dayStr = d < 10 ? `0${d}` : `${d}`;
             const weekdays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
-            const dateObj = new Date(2026, 7, d);
+            const dateObj = new Date(2026, 7, d); // 2026年8月
             const wday = weekdays[dateObj.getDay()];
             dates.push(`08/${dayStr} (${wday})`);
         }
@@ -236,24 +219,93 @@
         let activeFieldItem = null;
 
         window.onload = () => {
-            // 檢查網址是否有帶入 ?qr=xxx (現場掃描直接進入純輸入介面)
             const urlParams = new URLSearchParams(window.location.search);
             const qrParam = urlParams.get('qr');
+            
             if (qrParam) {
                 const targetItem = items.find(i => i.id === qrParam);
                 if (targetItem) {
-                    // 隱藏主後台，顯示現場填報畫面
+                    // QR 模式：隱藏後台，只顯示手機填報介面
                     document.getElementById('mainNav').style.display = 'none';
                     document.getElementById('mainContainer').style.display = 'none';
                     initFieldWorkerView(targetItem);
-                    return;
+                    return; 
                 }
             }
 
-            // 一般管理者模式
+            // 一般後台模式
             buildTabsAndViews();
-            loadData();
+            
+            // 提醒使用者設定 URL
+            if (SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbwfzOoGGdXKa1qY9jOi0H4D5DcR6wJ0Af8yaw6qvNS0TKqtD0AHa1UQ92ib_sAqUweqiQ/exec') {
+                showToast('請務必在程式碼中設定您的 Google Apps Script 網址才能儲存！', 'error');
+            } else {
+                fetchDataFromCloud();
+            }
         };
+
+        async function fetchDataFromCloud() {
+            if (SCRIPT_URL.includes('請將您部署後')) return;
+            
+            showLoading('從雲端載入資料中...');
+            try {
+                const response = await fetch(SCRIPT_URL, { method: 'GET' });
+                const data = await response.json();
+                
+                // 將抓下來的資料填入輸入框
+                for (const key in data) {
+                    const input = document.getElementById(key);
+                    if (input && document.activeElement !== input) { 
+                        input.value = data[key];
+                    }
+                }
+                calcMasterTable();
+                showToast('✅ 雲端資料同步完成！', 'success');
+            } catch (error) {
+                console.error("Fetch Error:", error);
+                showToast('❌ 讀取雲端資料失敗，請確認網路或 API 網址設定。', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function syncDataToCloud(showToastMsg = true) {
+            if (SCRIPT_URL.includes('請將您部署後')) {
+                showToast('無法儲存：請先設定 API 網址', 'error');
+                return;
+            }
+
+            // 收集畫面上所有輸入的資料
+            const data = {};
+            document.querySelectorAll('input.cell-input').forEach(input => {
+                if (input.value.trim() !== '') {
+                    data[input.getAttribute('data-id')] = input.value;
+                }
+            });
+
+            if (Object.keys(data).length === 0) return; // 沒資料就不送
+
+            if (showToastMsg) showLoading('儲存至雲端中...');
+            
+            try {
+                // 使用 text/plain 來避免 CORS 預檢請求的麻煩
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                if (result.status === 'success' && showToastMsg) {
+                    showToast('💾 資料已成功儲存至 Google 試算表！', 'success');
+                }
+            } catch (error) {
+                console.error("Save Error:", error);
+                if (showToastMsg) showToast('❌ 儲存失敗，請檢查網路連線。', 'error');
+            } finally {
+                if (showToastMsg) hideLoading();
+            }
+        }
 
         function initFieldWorkerView(item) {
             activeFieldItem = item;
@@ -265,12 +317,18 @@
             dates.forEach((dStr, idx) => {
                 selectEl.innerHTML += `<option value="${idx}">${dStr}</option>`;
             });
+            // 預設選取今天或接近今天的日期 (範例為直接選取第一天，實際情況可搭配 Date() 自動選取)
             selectEl.value = dates.length > 2 ? dates.length - 2 : 0;
 
             document.getElementById('fieldWorkerView').style.display = 'flex';
         }
 
-        function submitFieldData() {
+        async function submitFieldData() {
+            if (SCRIPT_URL.includes('請將您部署後')) {
+                alert('系統尚未設定 Google API 網址，無法寫入！');
+                return;
+            }
+
             const val = document.getElementById('fieldValueInput').value.trim();
             if (!val) {
                 alert('請輸入數值');
@@ -279,36 +337,54 @@
 
             const dateIdx = parseInt(document.getElementById('fieldTargetDate').value);
             const item = activeFieldItem;
-
-            // 讀取現有資料
-            let data = {};
-            const saved = localStorage.getItem('factory_system_v4');
-            if (saved) data = JSON.parse(saved);
+            const dataToSubmit = {};
 
             if (item.hasOpenClose) {
                 // 寫入當天收
-                data[`${item.id}_e_${dateIdx}`] = val;
+                dataToSubmit[`${item.id}_e_${dateIdx}`] = val;
                 // 自動帶入隔天開
                 if (dateIdx + 1 < dates.length) {
-                    data[`${item.id}_s_${dateIdx + 1}`] = val;
+                    dataToSubmit[`${item.id}_s_${dateIdx + 1}`] = val;
                 }
             } else {
-                data[`${item.id}_${dateIdx}`] = val;
+                dataToSubmit[`${item.id}_${dateIdx}`] = val;
             }
 
-            localStorage.setItem('factory_system_v4', JSON.stringify(data));
-            alert('✅ 數據已成功送出並寫入後台！');
-            document.getElementById('fieldValueInput').value = '';
+            // 鎖定按鈕防止重複點擊
+            const btn = document.getElementById('fieldSubmitBtn');
+            btn.disabled = true;
+            btn.innerText = '⏳ 雲端傳輸中...';
+            btn.classList.replace('bg-blue-600', 'bg-gray-500');
+
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(dataToSubmit)
+                });
+                
+                const result = await response.json();
+                if (result.status === 'success') {
+                    alert(`✅ [${item.label}] 數據已成功寫入雲端總表！\n辦公室端點擊「重新整理」即可看到最新數據。`);
+                    document.getElementById('fieldValueInput').value = '';
+                }
+            } catch (error) {
+                alert('❌ 傳輸失敗，請確保手機有連上網路。');
+            } finally {
+                // 恢復按鈕
+                btn.disabled = false;
+                btn.innerText = '✅ 確認送出寫入';
+                btn.classList.replace('bg-gray-500', 'bg-blue-600');
+            }
         }
 
         function buildTabsAndViews() {
             const tabsContainer = document.getElementById('navTabsContainer');
             const contentContainer = document.getElementById('tabsContentContainer');
-
             tabsContainer.innerHTML = '';
             contentContainer.innerHTML = '';
 
-            // 1. 總表
+            // 總表
             tabsContainer.innerHTML += `
                 <button onclick="switchTab('tab-master')" id="btn-tab-master" class="nav-tab active">
                     📊 8/1-8/31 用量總表
@@ -318,20 +394,16 @@
             contentContainer.innerHTML += `
                 <div id="tab-master" class="tab-content active bg-white p-4 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0">
                     <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
-                        <h2 class="text-xl font-bold text-gray-700">📅 115年8月份設備用量總結算表 (8/1 - 8/31)</h2>
+                        <h2 class="text-xl font-bold text-gray-700">📅 115年8月份設備用量總結算表 (雲端同步版)</h2>
                         <div class="flex flex-wrap gap-2">
+                            <button onclick="syncDataToCloud()" id="saveBtn" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">
+                                ☁️ 儲存至試算表
+                            </button>
                             <button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">
-                                📸 截圖 LINE 傳老闆
-                            </button>
-                            <button onclick="saveData()" id="saveBtn" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">
-                                💾 暫存資料
-                            </button>
-                            <button onclick="exportMasterCSV()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">
-                                📊 匯出總表 Excel
+                                📸 截圖傳送
                             </button>
                         </div>
                     </div>
-
                     <div class="table-container">
                         <table class="master-table" id="masterTable">
                             <thead>
@@ -346,7 +418,7 @@
                 </div>
             `;
 
-            // 2. 10 個獨立品項分頁
+            // 個別品項分頁
             items.forEach(item => {
                 const tabId = `tab-${item.id}`;
                 tabsContainer.innerHTML += `
@@ -358,14 +430,11 @@
                 contentContainer.innerHTML += `
                     <div id="${tabId}" class="tab-content bg-white p-4 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0">
                         <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-xl font-bold text-blue-800">📌 ${item.label} - 8月份每日度數紀錄表 (8/1 - 8/31)</h2>
-                            <div class="flex gap-2">
-                                <button onclick="saveData()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium">
-                                    💾 暫存資料
-                                </button>
-                            </div>
+                            <h2 class="text-xl font-bold text-blue-800">📌 ${item.label} - 每日度數紀錄</h2>
+                            <button onclick="syncDataToCloud()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium">
+                                ☁️ 儲存至雲端
+                            </button>
                         </div>
-
                         <div class="table-container">
                             <table class="fixed-table">
                                 <thead>
@@ -380,15 +449,15 @@
                                             return `
                                                 <tr>
                                                     <td class="font-semibold bg-gray-50">${dateStr}</td>
-                                                    <td><input type="text" class="cell-input" id="${item.id}_s_${dIdx}" data-id="${item.id}_s_${dIdx}" oninput="calcMasterTable()" placeholder="例: 11801:59"></td>
-                                                    <td><input type="text" class="cell-input" id="${item.id}_e_${dIdx}" data-id="${item.id}_e_${dIdx}" oninput="handleCloseInput('${item.id}', ${dIdx})" placeholder="例: 11860:46"></td>
+                                                    <td><input type="number" step="0.01" class="cell-input" id="${item.id}_s_${dIdx}" data-id="${item.id}_s_${dIdx}" oninput="calcMasterTable()" placeholder="例: 11801.59"></td>
+                                                    <td><input type="number" step="0.01" class="cell-input" id="${item.id}_e_${dIdx}" data-id="${item.id}_e_${dIdx}" oninput="handleCloseInput('${item.id}', ${dIdx})" placeholder="例: 11860.46"></td>
                                                 </tr>
                                             `;
                                         } else {
                                             return `
                                                 <tr>
                                                     <td class="font-semibold bg-gray-50">${dateStr}</td>
-                                                    <td><input type="text" class="cell-input" id="${item.id}_${dIdx}" data-id="${item.id}_${dIdx}" oninput="calcMasterTable()" placeholder="輸入度數"></td>
+                                                    <td><input type="number" step="0.01" class="cell-input" id="${item.id}_${dIdx}" data-id="${item.id}_${dIdx}" oninput="calcMasterTable()" placeholder="輸入度數"></td>
                                                 </tr>
                                             `;
                                         }
@@ -399,7 +468,6 @@
                     </div>
                 `;
             });
-
             calcMasterTable();
         }
 
@@ -424,7 +492,6 @@
                 }
             }
             calcMasterTable();
-            saveData();
         }
 
         function calcMasterTable() {
@@ -434,17 +501,16 @@
 
             dates.forEach((dateStr, dIdx) => {
                 let rowHtml = `<tr><td class="col-date">${dateStr}</td>`;
-
                 items.forEach(item => {
                     let usageVal = '-';
                     if (item.hasOpenClose) {
                         const openStr = document.getElementById(`${item.id}_s_${dIdx}`)?.value || '';
                         const closeStr = document.getElementById(`${item.id}_e_${dIdx}`)?.value || '';
                         
-                        const openNum = parseMeterNumber(openStr);
-                        const closeNum = parseMeterNumber(closeStr);
+                        const openNum = parseFloat(openStr);
+                        const closeNum = parseFloat(closeStr);
 
-                        if (openNum !== null && closeNum !== null) {
+                        if (!isNaN(openNum) && !isNaN(closeNum)) {
                             usageVal = (closeNum - openNum).toFixed(2);
                             if (usageVal < 0) usageVal = '-';
                         }
@@ -462,73 +528,51 @@
                             usageVal = currNum.toFixed(2);
                         }
                     }
-
                     rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usageVal}</td>`;
                 });
-
                 rowHtml += `</tr>`;
                 tbody.innerHTML += rowHtml;
             });
         }
 
-        function parseMeterNumber(str) {
-            if (!str) return null;
-            if (str.includes(':')) {
-                const parts = str.split(':');
-                return parseFloat(parts[0]);
-            } else if (str.includes('=')) {
-                const parts = str.split('=');
-                return parseFloat(parts[0]);
-            }
-            return parseFloat(str);
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            let icon = type === 'success' ? '✅' : (type === 'loading' ? '⏳' : '⚠️');
+            toast.innerHTML = `${icon} ${message}`;
+            container.appendChild(toast);
+            
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => toast.classList.add('show'));
+            });
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, type === 'error' ? 5000 : 3000);
+        }
+
+        function showLoading(text) {
+            document.getElementById('loading-text').innerText = text;
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading-overlay').style.display = 'none';
         }
 
         function takeScreenshot() {
             switchTab('tab-master');
+            showToast('正在產生截圖，請稍候...', 'loading');
             setTimeout(() => {
                 html2canvas(document.querySelector('#tab-master'), { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
                     const link = document.createElement('a');
-                    link.download = '115年8月用量總表_完整月報.png';
+                    link.download = '115年8月雲端用量總表_截圖.png';
                     link.href = canvas.toDataURL('image/png');
                     link.click();
                 });
             }, 300);
-        }
-
-        function exportMasterCSV() {
-            let csv = "\uFEFF日期," + items.map(i => `${i.label}用量`).join(",") + "\r\n";
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = "115年8月設備用量總結算表.csv";
-            link.click();
-        }
-
-        function saveData() {
-            const data = {};
-            document.querySelectorAll('input.cell-input').forEach(input => {
-                if (input.value.trim() !== '') data[input.getAttribute('data-id')] = input.value;
-            });
-            localStorage.setItem('factory_system_v4', JSON.stringify(data));
-            
-            const btn = document.getElementById('saveBtn');
-            if (btn) {
-                const ori = btn.innerText;
-                btn.innerText = '✔️ 已儲存';
-                setTimeout(() => { btn.innerText = ori; }, 2000);
-            }
-        }
-
-        function loadData() {
-            const saved = localStorage.getItem('factory_system_v4');
-            if (saved) {
-                const data = JSON.parse(saved);
-                for (const key in data) {
-                    const input = document.getElementById(key);
-                    if (input) input.value = data[key];
-                }
-            }
-            calcMasterTable();
         }
     </script>
 </body>
