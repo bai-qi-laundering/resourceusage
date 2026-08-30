@@ -155,11 +155,15 @@
             box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
             background-color: #eff6ff;
         }
+
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 50; justify-content: center; align-items: center; padding: 16px; backdrop-filter: blur(4px); }
+        .modal.active { display: flex; }
     </style>
 </head>
 <body class="text-gray-800">
 
-    <nav class="bg-white shadow-sm border-b border-gray-200">
+    <!-- 主系統導覽列 -->
+    <nav class="bg-white shadow-sm border-b border-gray-200" id="mainNav">
         <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center gap-2">
@@ -174,11 +178,36 @@
         </div>
     </nav>
 
-    <div class="max-w-[1600px] mx-auto p-4 md:p-6">
-        
+    <!-- 主系統內容區 -->
+    <div class="max-w-[1600px] mx-auto p-4 md:p-6" id="mainContainer">
         <div class="nav-tabs-container" id="navTabsContainer"></div>
         <div id="tabsContentContainer"></div>
+    </div>
 
+    <!-- 現場工作人員專用：極簡填報畫面 (掃描 QR 碼後直接覆蓋全螢幕，無返回後台按鈕) -->
+    <div id="fieldWorkerView" class="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center p-4" style="display: none;">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md text-center">
+            <div class="bg-blue-600 p-4 rounded-xl text-white mb-6">
+                <h2 class="text-2xl font-bold" id="field-device-title">蒸氣高燃鍋爐</h2>
+                <p class="text-sm text-blue-100 mt-1">現場數據快速填報</p>
+            </div>
+            
+            <div class="mb-4 text-left">
+                <label class="block text-sm font-bold text-gray-700 mb-1">📅 選擇填報日期：</label>
+                <select id="fieldTargetDate" class="w-full p-3 rounded-lg border border-gray-300 font-semibold bg-gray-50 text-base">
+                    <!-- JS 動態生成 -->
+                </select>
+            </div>
+
+            <div class="mb-6 text-left">
+                <label class="block text-sm font-bold text-gray-700 mb-1" id="field-input-label">📝 輸入讀數：</label>
+                <input type="text" id="fieldValueInput" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="例: 11860:46">
+            </div>
+
+            <button onclick="submitFieldData()" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg shadow-lg mb-2">
+                ✅ 確認送出寫入
+            </button>
+        </div>
     </div>
 
     <script>
@@ -204,10 +233,73 @@
             { id: 'meng', label: '猛砂', hasOpenClose: false }
         ];
 
+        let activeFieldItem = null;
+
         window.onload = () => {
+            // 檢查網址是否有帶入 ?qr=xxx (現場掃描直接進入純輸入介面)
+            const urlParams = new URLSearchParams(window.location.search);
+            const qrParam = urlParams.get('qr');
+            if (qrParam) {
+                const targetItem = items.find(i => i.id === qrParam);
+                if (targetItem) {
+                    // 隱藏主後台，顯示現場填報畫面
+                    document.getElementById('mainNav').style.display = 'none';
+                    document.getElementById('mainContainer').style.display = 'none';
+                    initFieldWorkerView(targetItem);
+                    return;
+                }
+            }
+
+            // 一般管理者模式
             buildTabsAndViews();
             loadData();
         };
+
+        function initFieldWorkerView(item) {
+            activeFieldItem = item;
+            document.getElementById('field-device-title').innerText = item.label;
+            document.getElementById('field-input-label').innerText = item.hasOpenClose ? '📝 輸入收 (讀數) [會自動連動隔天開]:' : '📝 輸入當日讀數:';
+
+            const selectEl = document.getElementById('fieldTargetDate');
+            selectEl.innerHTML = '';
+            dates.forEach((dStr, idx) => {
+                selectEl.innerHTML += `<option value="${idx}">${dStr}</option>`;
+            });
+            selectEl.value = dates.length > 2 ? dates.length - 2 : 0;
+
+            document.getElementById('fieldWorkerView').style.display = 'flex';
+        }
+
+        function submitFieldData() {
+            const val = document.getElementById('fieldValueInput').value.trim();
+            if (!val) {
+                alert('請輸入數值');
+                return;
+            }
+
+            const dateIdx = parseInt(document.getElementById('fieldTargetDate').value);
+            const item = activeFieldItem;
+
+            // 讀取現有資料
+            let data = {};
+            const saved = localStorage.getItem('factory_system_v4');
+            if (saved) data = JSON.parse(saved);
+
+            if (item.hasOpenClose) {
+                // 寫入當天收
+                data[`${item.id}_e_${dateIdx}`] = val;
+                // 自動帶入隔天開
+                if (dateIdx + 1 < dates.length) {
+                    data[`${item.id}_s_${dateIdx + 1}`] = val;
+                }
+            } else {
+                data[`${item.id}_${dateIdx}`] = val;
+            }
+
+            localStorage.setItem('factory_system_v4', JSON.stringify(data));
+            alert('✅ 數據已成功送出並寫入後台！');
+            document.getElementById('fieldValueInput').value = '';
+        }
 
         function buildTabsAndViews() {
             const tabsContainer = document.getElementById('navTabsContainer');
@@ -323,7 +415,6 @@
             }
         }
 
-        // 開收自動連動：收的數值自動帶入隔天開
         function handleCloseInput(itemId, dIdx) {
             const closeVal = document.getElementById(`${itemId}_e_${dIdx}`).value;
             if (dIdx + 1 < dates.length) {
@@ -336,9 +427,9 @@
             saveData();
         }
 
-        // 總表用量計算
         function calcMasterTable() {
             const tbody = document.getElementById('masterTableBody');
+            if (!tbody) return;
             tbody.innerHTML = '';
 
             dates.forEach((dateStr, dIdx) => {
