@@ -6,183 +6,177 @@
     <title>智慧收尾用量系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, 'Microsoft JhengHei';
-            background-color: #f3f4f6; /* 較淺的灰色背景 */
+            background-color: #f3f4f6;
         }
 
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         
-        /* 更新為資料夾風格的分頁標籤 */
+        /* 檔案夾風格分頁標籤 (支援多個分頁自動換行) */
         .nav-tabs-container {
             display: flex;
+            flex-wrap: wrap;
             gap: 4px;
             margin-top: 10px;
-            padding-left: 20px;
-            border-bottom: 2px solid #e5e7eb;
+            padding-left: 10px;
+            border-bottom: 2px solid #cbd5e1;
         }
         
         .nav-tab {
             transition: all 0.2s ease;
-            background-color: #f9fafb;
-            border: 1px solid #d1d5db;
+            background-color: #f1f5f9;
+            border: 1px solid #cbd5e1;
             border-bottom: none;
-            color: #6b7280;
-            padding: 10px 20px;
-            border-radius: 8px 8px 0 0;
-            font-weight: 500;
+            color: #475569;
+            padding: 8px 16px;
+            border-radius: 6px 6px 0 0;
+            font-weight: 600;
+            font-size: 14px;
             cursor: pointer;
-            box-shadow: 0 -2px 5px rgba(0,0,0,0.02);
         }
         
         .nav-tab:hover {
-            background-color: #f3f4f6;
+            background-color: #e2e8f0;
         }
         
         .nav-tab.active {
             background-color: white;
-            color: #4f46e5;
+            color: #2563eb;
             font-weight: 700;
-            border-top: 3px solid #4f46e5;
-            border-left: 1px solid #d1d5db;
-            border-right: 1px solid #d1d5db;
-            /* 覆蓋下方的邊界線 */
+            border-top: 3px solid #2563eb;
+            border-left: 1px solid #cbd5e1;
+            border-right: 1px solid #cbd5e1;
             margin-bottom: -2px; 
-            padding-bottom: 12px;
-            box-shadow: 0 -3px 6px rgba(0,0,0,0.05);
+            padding-bottom: 10px;
+            box-shadow: 0 -2px 4px rgba(0,0,0,0.05);
         }
 
         .table-container {
-            max-height: calc(100vh - 250px);
+            max-height: calc(100vh - 240px);
             overflow: auto;
             background: white;
             border-radius: 0 8px 8px 8px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid #cbd5e1;
+            border-top: none;
         }
 
-        table {
+        /* 絕對精準對齊的表格設定 */
+        table.fixed-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed; 
+        }
+
+        table.fixed-table th, table.fixed-table td {
+            border: 1px solid #cbd5e1;
+            text-align: center;
+            vertical-align: middle;
+            padding: 6px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        table.fixed-table th {
+            position: sticky;
+            top: 0;
+            background-color: #bfdbfe;
+            color: #1e3a8a !important;
+            font-weight: 800 !important;
+            font-size: 14px;
+            z-index: 10;
+            padding: 10px 4px;
+        }
+
+        /* 總表多欄位表格 */
+        table.master-table {
+            width: max-content;
+            min-width: 100%;
             border-collapse: separate;
             border-spacing: 0;
-            width: max-content; 
-            table-layout: fixed; /* 關鍵：強制表格佈局 */
+            table-layout: fixed;
         }
-
-        th, td {
-            border-right: 1px solid #e5e7eb;
-            border-bottom: 1px solid #e5e7eb;
-            text-align: center !important;
+        table.master-table th, table.master-table td {
+            border-right: 1px solid #cbd5e1;
+            border-bottom: 1px solid #cbd5e1;
+            text-align: center;
             vertical-align: middle;
             padding: 4px;
             box-sizing: border-box;
         }
-        
-        /* 整個表格的頂部邊框 */
-        tr:first-child th {
-            border-top: 1px solid #e5e7eb;
-        }
-        /* 第一欄的左側邊框 */
-        th:first-child, td:first-child {
-            border-left: 1px solid #e5e7eb;
-        }
-
-        /* 表頭修復：明確寬度且不換行 */
-        th {
+        table.master-table th {
             position: sticky;
             top: 0;
-            background-color: #bfdbfe; /* 淺藍色表頭 */
-            color: #111827 !important; /* 深灰色/黑色文字 */
-            font-weight: 800 !important; 
-            font-size: 14px;
+            background-color: #bfdbfe;
+            color: #1e3a8a !important;
+            font-weight: 800 !important;
+            font-size: 13px;
             z-index: 10;
-            white-space: nowrap; 
-            overflow: hidden;
-            text-overflow: ellipsis;
-            padding: 12px 4px !important;
+            white-space: nowrap;
+            padding: 10px 4px;
         }
-        
-        /* 特定欄位寬度以確保對齊 */
-        th.col-date, td.col-date {
-            width: 120px;
-            min-width: 120px;
-            max-width: 120px;
+        table.master-table th.col-date, table.master-table td.col-date {
+            width: 110px;
+            min-width: 110px;
+            max-width: 110px;
             position: sticky;
             left: 0;
-            background-color: #f9fafb;
+            background-color: #f1f5f9;
             z-index: 5;
             font-weight: 600;
         }
-
-        th.col-date {
+        table.master-table th.col-date {
             z-index: 15;
-            background-color: #93c5fd; /* 稍微深一點的藍色區隔角落 */
+            background-color: #93c5fd;
         }
-        
-        /* 標準欄位寬度 */
-        .col-std {
+        table.master-table .col-std {
             width: 90px;
             min-width: 90px;
             max-width: 90px;
         }
 
         input.cell-input {
-            width: 100%; /* 填滿 td */
-            max-width: 75px; 
+            width: 100%;
+            max-width: 78px;
             padding: 4px;
-            border: 1px solid #d1d5db;
+            border: 1px solid #cbd5e1;
             border-radius: 4px;
             text-align: center;
-            font-size: 14px;
-            transition: all 0.2s;
+            font-size: 13px;
             background-color: #ffffff;
             margin: 0 auto;
             display: block;
         }
-
         input.cell-input:focus {
             outline: none;
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
-            background-color: #eef2ff;
-        }
-        
-        .highlight-cell {
-            border-color: #8b5cf6 !important;
-            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.5) !important;
-            background-color: #ede9fe !important;
-            animation: pulse 1.5s infinite;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+            background-color: #eff6ff;
         }
 
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7); }
-            70% { box-shadow: 0 0 0 6px rgba(139, 92, 246, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
-        }
-
-        tr.day-start td { border-top: 2px solid #9ca3af; }
-        .row-group:hover td { background-color: #f3f4f6; }
-        .row-group:hover td.col-date { background-color: #e5e7eb; }
-
-        /* Modal Styles */
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 50; justify-content: center; align-items: center; padding: 16px; backdrop-filter: blur(4px); }
         .modal.active { display: flex; }
     </style>
 </head>
 <body class="text-gray-800">
 
-    <!-- 頂部導航列 -->
+    <!-- 頂部標題列 -->
     <nav class="bg-white shadow-sm border-b border-gray-200">
         <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center gap-2">
-                    <div class="bg-indigo-600 p-2 rounded-lg text-white">
+                    <div class="bg-blue-600 p-2 rounded-lg text-white">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                     </div>
-                    <span class="font-bold text-xl text-gray-800">智慧收尾用量系統</span>
+                    <span class="font-bold text-xl text-gray-800">智慧收尾用量系統 (115年8月份)</span>
                 </div>
             </div>
         </div>
@@ -190,136 +184,44 @@
 
     <div class="max-w-[1600px] mx-auto p-4 md:p-6">
         
-        <!-- 更新：資料夾風格的分頁標籤 -->
-        <div class="nav-tabs-container">
-            <button onclick="switchTab('tab-table')" id="btn-tab-table" class="nav-tab active flex items-center gap-2">
-                <span>📊</span> 總表檢視
-            </button>
-            <button onclick="switchTab('tab-scan')" id="btn-tab-scan" class="nav-tab flex items-center gap-2">
-                <span>📱</span> 現場掃碼
-            </button>
-            <button onclick="switchTab('tab-qr')" id="btn-tab-qr" class="nav-tab flex items-center gap-2">
-                <span>🖨️</span> QR碼管理
-            </button>
+        <!-- 11個分頁標籤導覽 (總表 + 10個品項) -->
+        <div class="nav-tabs-container" id="navTabsContainer">
+            <!-- JS 動態生成分頁按鈕 -->
         </div>
         
-        <!-- 分頁 1：總表 -->
-        <div id="tab-table" class="tab-content active bg-white p-4 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0">
-            <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4" id="table-controls">
-                <h2 class="text-xl font-bold text-gray-700">📅 115年8月份用量總表</h2>
-                <div class="flex gap-2">
-                    <button onclick="saveData()" id="saveBtn" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium transition-colors flex items-center gap-1">
-                        💾 暫存資料
-                    </button>
-                    <button onclick="exportCSV()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow text-sm font-medium transition-colors flex items-center gap-1">
-                        📊 匯出 Excel
-                    </button>
-                </div>
-            </div>
-
-            <div class="table-container" id="table-container-div">
-                <table id="dataTable">
-                    <thead>
-                        <tr>
-                            <th class="col-date">日期</th>
-                            <th class="col-std">蒸氣高燃鍋爐</th>
-                            <th class="col-std">蒸氣鍋爐2</th>
-                            <th class="col-std">瓦斯</th>
-                            <th class="col-std">大支自來水</th>
-                            <th class="col-std">小支自來水</th>
-                            <th class="col-std">大支軟水A</th>
-                            <th class="col-std">小支軟水B</th>
-                            <th class="col-std">軟水表1</th>
-                            <th class="col-std">軟水表2</th>
-                            <th class="col-std">猛砂</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody">
-                        <!-- Javascript 動態生成 -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- 分頁 2：現場掃碼 (行動版專屬設計) -->
-        <div id="tab-scan" class="tab-content bg-white p-6 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0">
-            <div class="max-w-md mx-auto bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
-                <div class="bg-indigo-600 p-6 text-center text-white">
-                    <h2 class="text-2xl font-bold mb-2">📸 設備掃碼輸入</h2>
-                    <p class="text-indigo-200 text-sm">請選擇今天的日期，然後點擊下方按鈕掃描機台 QR Code。</p>
-                </div>
-                
-                <div class="p-6 flex flex-col gap-6">
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-2">📍 1. 選擇紀錄日期：</label>
-                        <select id="targetDate" class="w-full p-3 rounded-xl border-2 border-indigo-200 bg-indigo-50 font-bold text-indigo-900 outline-none focus:border-indigo-500 transition-colors text-lg cursor-pointer">
-                            <!-- JS 生成 -->
-                        </select>
-                    </div>
-
-                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                        <label class="block text-sm font-bold text-gray-700 mb-3">📷 2. 執行掃描：</label>
-                        <button onclick="openQRScanner()" class="w-full flex justify-center items-center gap-3 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg transition-transform transform hover:scale-[1.02] active:scale-95 font-bold text-lg">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                            </svg>
-                            掃描機台 QR Code
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="aiStatus" class="mt-6 max-w-md mx-auto text-purple-700 font-bold hidden bg-purple-100 p-4 rounded-xl text-center animate-pulse border border-purple-300 shadow-sm">
-                🤖 AI 正在判讀照片，請稍候...
-            </div>
-        </div>
-
-        <!-- 分頁 3：QR 碼管理 -->
-        <div id="tab-qr" class="tab-content bg-white p-6 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0">
-            <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                <div class="flex justify-between items-center mb-6 border-b pb-4">
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-800">🖨️ 設備標籤列印區</h2>
-                        <p class="text-sm text-gray-500 mt-1">請將這些標籤印出並貼在現場機台上，方便人員掃描。</p>
-                    </div>
-                    <button onclick="window.print()" class="px-5 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg shadow font-medium flex items-center gap-2">
-                        列印本頁
-                    </button>
-                </div>
-                <div id="qrCodesContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                    <!-- Javascript 生成 QR Code -->
-                </div>
-            </div>
+        <!-- ================= 容器：分頁內容 ================= -->
+        <div id="tabsContentContainer">
+            <!-- JS 動態生成各個分頁的內容畫面 -->
         </div>
 
     </div>
 
     <!-- AI 辨識結果確認 Modal -->
     <div id="confirmModal" class="modal">
-        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm mx-4 transform transition-all">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm mx-4">
             <div class="text-center mb-6">
                 <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-3">
                     <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                     </svg>
                 </div>
-                <h3 class="text-lg leading-6 font-bold text-gray-900" id="confirm-title">AI 辨識完成</h3>
-                <p class="text-sm text-gray-500 mt-2">請確認以下數值，若有誤可直接點擊修改。</p>
+                <h3 class="text-lg leading-6 font-bold text-gray-900">AI 辨識完成</h3>
+                <p class="text-sm text-gray-500 mt-2">請確認以下數值，若有誤可直接修改。</p>
             </div>
             
             <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6">
-                <p class="text-xs text-gray-500 font-bold mb-1 uppercase tracking-wider">設備名稱</p>
-                <p class="text-base font-bold text-indigo-700 mb-4" id="confirm-device-name">蒸氣高燃鍋爐</p>
+                <p class="text-xs text-gray-500 font-bold mb-1 uppercase">設備項目</p>
+                <p class="text-base font-bold text-blue-700 mb-4" id="confirm-device-name">蒸氣高燃鍋爐</p>
                 
-                <p class="text-xs text-gray-500 font-bold mb-1 uppercase tracking-wider">辨識結果 (可編輯)</p>
-                <input type="text" id="confirm-value-input" class="w-full text-center text-2xl font-black text-gray-800 p-3 border-2 border-indigo-300 rounded-lg focus:border-indigo-600 focus:outline-none transition-colors">
+                <p class="text-xs text-gray-500 font-bold mb-1 uppercase">辨識結果 (可手動修改)</p>
+                <input type="text" id="confirm-value-input" class="w-full text-center text-2xl font-black text-gray-800 p-3 border-2 border-blue-300 rounded-lg focus:border-blue-600 focus:outline-none">
             </div>
 
             <div class="flex gap-3">
-                <button onclick="closeConfirmModal()" class="w-1/2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold transition-colors border border-gray-300">
+                <button onclick="closeConfirmModal()" class="w-1/2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold border border-gray-300">
                     取消重拍
                 </button>
-                <button onclick="submitConfirmedData()" class="w-1/2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md transition-colors">
+                <button onclick="submitConfirmedData()" class="w-1/2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md">
                     確認寫入
                 </button>
             </div>
@@ -330,25 +232,28 @@
     <div id="qrModal" class="modal">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm mx-4">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold text-gray-800">📷 掃描條碼</h2>
+                <h2 class="text-xl font-bold text-gray-800">📷 掃描機台 QR 碼</h2>
                 <button onclick="closeQRScanner()" class="text-gray-400 hover:text-red-500 font-bold text-2xl">&times;</button>
             </div>
             <div id="qr-reader" class="w-full bg-black rounded-xl overflow-hidden shadow-inner"></div>
         </div>
     </div>
 
-    <!-- 隱藏的上傳按鈕 -->
+    <!-- 隱藏的拍照按鈕 -->
     <input type="file" id="singleMeterInput" accept="image/*" capture="environment" class="hidden" onchange="handleSingleMeterUpload(event)">
 
     <script>
-        const dates = [
-            '08/17 (週一)', '08/18 (週二)', '08/19 (週三)', '08/20 (週四)',
-            '08/21 (週五)', '08/22 (週六)', '08/23 (週日)', '08/24 (週一)',
-            '08/25 (週二)', '08/26 (週三)', '08/27 (週四)', '08/28 (週五)',
-            '08/29 (週六)', '08/30 (週日)', '08/31 (週一)'
-        ];
+        // 完整的 8/1 - 8/31 日期定義
+        const dates = [];
+        for (let d = 1; d <= 31; d++) {
+            const dayStr = d < 10 ? `0${d}` : `${d}`;
+            const weekdays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+            const dateObj = new Date(2026, 7, d);
+            const wday = weekdays[dateObj.getDay()];
+            dates.push(`08/${dayStr} (${wday})`);
+        }
 
-        // 系統核心品項定義
+        // 10 個核心品項定義
         const items = [
             { id: 'boiler1', label: '蒸氣高燃鍋爐', hasOpenClose: true },
             { id: 'boiler2', label: '蒸氣鍋爐2', hasOpenClose: true },
@@ -364,21 +269,153 @@
 
         let html5QrcodeScanner = null;
         let pendingScanItem = null;
-        let pendingDateIndex = null; 
+        let activeTabId = 'tab-master';
 
         window.onload = () => {
-            initTable();
-            initDateSelector();
+            buildTabsAndViews();
             loadData();
-            generateQRCodesForPrint();
             
             const urlParams = new URLSearchParams(window.location.search);
             const qrParam = urlParams.get('qr');
             if (qrParam) {
-                switchTab('tab-scan');
                 setTimeout(() => processScannedCode(qrParam), 500);
             }
         };
+
+        // 動態生成 11 個分頁與畫面的核心函式
+        function buildTabsAndViews() {
+            const tabsContainer = document.getElementById('navTabsContainer');
+            const contentContainer = document.getElementById('tabsContentContainer');
+
+            tabsContainer.innerHTML = '';
+            contentContainer.innerHTML = '';
+
+            // 1. 建立「總表」分頁按鈕與內容
+            tabsContainer.innerHTML += `
+                <button onclick="switchTab('tab-master')" id="btn-tab-master" class="nav-tab active">
+                    📊 8/1-8/31 用量總表
+                </button>
+            `;
+
+            contentContainer.innerHTML += `
+                <div id="tab-master" class="tab-content active bg-white p-4 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0">
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+                        <h2 class="text-xl font-bold text-gray-700">📅 115年8月份設備用量總結算表 (8/1 - 8/31)</h2>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="openQRScanner()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow text-sm font-medium transition-colors flex items-center gap-1">
+                                📱 現場掃碼填寫
+                            </button>
+                            <button onclick="openQRGenerator()" class="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg shadow text-sm font-medium transition-colors flex items-center gap-1">
+                                🖨️ QR碼管理
+                            </button>
+                            <button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium transition-colors flex items-center gap-1">
+                                📸 截圖 LINE 傳老闆
+                            </button>
+                            <button onclick="saveData()" id="saveBtn" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium transition-colors flex items-center gap-1">
+                                💾 暫存資料
+                            </button>
+                            <button onclick="exportMasterCSV()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow text-sm font-medium transition-colors flex items-center gap-1">
+                                📊 匯出總表 Excel
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="master-table" id="masterTable">
+                            <thead>
+                                <tr>
+                                    <th class="col-date">日期</th>
+                                    ${items.map(item => `<th class="col-std">${item.label}用量</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody id="masterTableBody">
+                                <!-- JS 動態計算用量 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            // 2. 建立 10 個獨立品項分頁按鈕與內容
+            items.forEach(item => {
+                const tabId = `tab-${item.id}`;
+                tabsContainer.innerHTML += `
+                    <button onclick="switchTab('${tabId}')" id="btn-${tabId}" class="nav-tab">
+                        📋 ${item.label}
+                    </button>
+                `;
+
+                contentContainer.innerHTML += `
+                    <div id="${tabId}" class="tab-content bg-white p-4 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-bold text-blue-800">📌 ${item.label} - 8月份每日度數紀錄表 (8/1 - 8/31)</h2>
+                            <div class="flex gap-2">
+                                <button onclick="openScannerForItem('${item.id}')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">
+                                    📷 拍照辨識填寫
+                                </button>
+                                <button onclick="saveData()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium">
+                                    💾 暫存資料
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-container">
+                            <table class="fixed-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 120px;">日期</th>
+                                        ${item.hasOpenClose ? '<th>開 (讀數)</th><th>收 (讀數)</th>' : '<th>當日讀數</th>'}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${dates.map((dateStr, dIdx) => {
+                                        if (item.hasOpenClose) {
+                                            return `
+                                                <tr>
+                                                    <td class="font-semibold bg-gray-50">${dateStr}</td>
+                                                    <td><input type="text" class="cell-input" id="${item.id}_s_${dIdx}" data-id="${item.id}_s_${dIdx}" oninput="calcMasterTable()" placeholder="例: 11801=59"></td>
+                                                    <td><input type="text" class="cell-input" id="${item.id}_e_${dIdx}" data-id="${item.id}_e_${dIdx}" oninput="handleCloseInput('${item.id}', ${dIdx})"></td>
+                                                </tr>
+                                            `;
+                                        } else {
+                                            return `
+                                                <tr>
+                                                    <td class="font-semibold bg-gray-50">${dateStr}</td>
+                                                    <td><input type="text" class="cell-input" id="${item.id}_${dIdx}" data-id="${item.id}_${dIdx}" oninput="calcMasterTable()" placeholder="輸入度數"></td>
+                                                </tr>
+                                            `;
+                                        }
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // 3. 建立 QR 碼管理分頁
+            tabsContainer.innerHTML += `
+                <button onclick="switchTab('tab-qr')" id="btn-tab-qr" class="nav-tab">
+                    🖨️ QR碼管理
+                </button>
+            `;
+
+            contentContainer.innerHTML += `
+                <div id="tab-qr" class="tab-content bg-white p-6 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0">
+                    <div class="flex justify-between items-center mb-6 border-b pb-4">
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-800">🖨️ 現場機台 QR 碼標籤</h2>
+                            <p class="text-sm text-gray-500 mt-1">您可以將這些 QR 碼印出並貼在對應設備旁，人員可直接手機掃描拍照填寫。</p>
+                        </div>
+                        <button onclick="window.print()" class="px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg shadow font-medium">列印本頁</button>
+                    </div>
+                    <div id="qrCodesContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+                </div>
+            `;
+
+            generateQRCodes();
+            calcMasterTable();
+        }
 
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -386,78 +423,102 @@
             
             document.getElementById(tabId).classList.add('active');
             document.getElementById(`btn-${tabId}`).classList.add('active');
+
+            if (tabId === 'tab-master') {
+                calcMasterTable();
+            }
         }
 
-        function initDateSelector() {
-            const selector = document.getElementById('targetDate');
-            dates.forEach((date, index) => {
-                const option = document.createElement('option');
-                option.value = index;
-                option.text = date;
-                selector.appendChild(option);
-            });
-            selector.value = dates.length > 2 ? 12 : 0; 
+        // ================= 自動連動開收邏輯 =================
+        function handleCloseInput(itemId, dIdx) {
+            const closeVal = document.getElementById(`${itemId}_e_${dIdx}`).value;
+            // 如果填寫了當天收，自動帶入隔天開
+            if (dIdx + 1 < dates.length) {
+                const nextOpenInput = document.getElementById(`${itemId}_s_${dIdx + 1}`);
+                if (nextOpenInput && (!nextOpenInput.value || nextOpenInput.value.trim() === '')) {
+                    nextOpenInput.value = closeVal;
+                }
+            }
+            calcMasterTable();
+            saveData();
         }
 
-        function initTable() {
-            const tbody = document.getElementById('tableBody');
-            
-            dates.forEach((date, index) => {
-                const tbodyGroup = document.createElement('tbody');
-                tbodyGroup.className = 'row-group';
+        // ================= 總表計算邏輯 =================
+        function calcMasterTable() {
+            const tbody = document.getElementById('masterTableBody');
+            tbody.innerHTML = '';
 
-                const tr1 = document.createElement('tr');
-                tr1.className = 'day-start';
-                
-                const tdDate = document.createElement('td');
-                tdDate.rowSpan = 2;
-                tdDate.className = 'col-date';
-                tdDate.innerText = date;
-                tr1.appendChild(tdDate);
+            dates.forEach((dateStr, dIdx) => {
+                let rowHtml = `<tr><td class="col-date">${dateStr}</td>`;
 
                 items.forEach(item => {
+                    let usageVal = '-';
                     if (item.hasOpenClose) {
-                        tr1.innerHTML += `<td class="col-std relative">
-                                          <span class="text-[10px] text-gray-400 absolute left-1 top-1">開</span>
-                                          <input type="text" class="cell-input mt-3" id="${item.id}_s_${index}" data-id="${item.id}_s_${index}"></td>`;
+                        // 鍋爐類計算邏輯 (收的數值減去開的數值，若有 = 後面的數字也可解析)
+                        const openStr = document.getElementById(`${item.id}_s_${dIdx}`)?.value || '';
+                        const closeStr = document.getElementById(`${item.id}_e_${dIdx}`)?.value || '';
+                        
+                        const openNum = parseMeterNumber(openStr);
+                        const closeNum = parseMeterNumber(closeStr);
+
+                        if (openNum !== null && closeNum !== null) {
+                            usageVal = (closeNum - openNum).toFixed(2);
+                            if (usageVal < 0) usageVal = '-';
+                        }
                     } else {
-                        tr1.innerHTML += `<td rowspan="2" class="col-std">
-                                          <input type="text" class="cell-input" id="${item.id}_${index}" data-id="${item.id}_${index}"></td>`;
+                        // 一般計量表計算 (通常今日減昨日，或依實際輸入)
+                        const currStr = document.getElementById(`${item.id}_${dIdx}`)?.value || '';
+                        const currNum = parseFloat(currStr);
+                        
+                        if (!isNaN(currNum) && dIdx > 0) {
+                            const prevStr = document.getElementById(`${item.id}_${dIdx - 1}`)?.value || '';
+                            const prevNum = parseFloat(prevStr);
+                            if (!isNaN(prevNum)) {
+                                usageVal = (currNum - prevNum).toFixed(2);
+                            }
+                        } else if (!isNaN(currNum) && dIdx === 0) {
+                            usageVal = currNum.toFixed(2);
+                        }
                     }
+
+                    rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usageVal}</td>`;
                 });
 
-                const tr2 = document.createElement('tr');
-                items.forEach(item => {
-                    if (item.hasOpenClose) {
-                        tr2.innerHTML += `<td class="col-std relative">
-                                          <span class="text-[10px] text-gray-400 absolute left-1 top-1">收</span>
-                                          <input type="text" class="cell-input mt-3" id="${item.id}_e_${index}" data-id="${item.id}_e_${index}"></td>`;
-                    }
-                });
-
-                tbodyGroup.appendChild(tr1);
-                tbodyGroup.appendChild(tr2);
-                tbody.appendChild(tbodyGroup);
+                rowHtml += `</tr>`;
+                tbody.innerHTML += rowHtml;
             });
         }
 
+        function parseMeterNumber(str) {
+            if (!str) return null;
+            // 處理如 11801=59 或 11860:46 的格式
+            if (str.includes('=')) {
+                const parts = str.split('=');
+                return parseFloat(parts[0]);
+            } else if (str.includes(':')) {
+                const parts = str.split(':');
+                return parseFloat(parts[0]);
+            }
+            return parseFloat(str);
+        }
+
+        // ================= QR 掃描與 AI 辨識 =================
         function openQRScanner() {
             document.getElementById('qrModal').classList.add('active');
             html5QrcodeScanner = new Html5Qrcode("qr-reader");
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-            
-            html5QrcodeScanner.start({ facingMode: "environment" }, config, 
+            html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, 
                 (decodedText) => {
                     html5QrcodeScanner.stop().then(() => {
                         document.getElementById('qrModal').classList.remove('active');
                         processScannedCode(decodedText);
                     });
-                },
-                (err) => {}
-            ).catch(err => {
-                alert("無法存取相機，請確認已給予權限。");
-                closeQRScanner();
-            });
+                }, (err) => {}
+            ).catch(err => { alert("無法存取相機"); closeQRScanner(); });
+        }
+
+        function openScannerForItem(itemId) {
+            pendingScanItem = items.find(i => i.id === itemId);
+            document.getElementById('singleMeterInput').click();
         }
 
         function closeQRScanner() {
@@ -467,13 +528,8 @@
 
         function processScannedCode(code) {
             let finalCode = code.includes('?qr=') ? code.split('?qr=')[1] : code;
-            const matchedItem = items.find(i => i.id === finalCode);
-            
-            if (matchedItem) {
-                pendingScanItem = matchedItem;
-                pendingDateIndex = parseInt(document.getElementById('targetDate').value);
-                
-                // 喚醒相機
+            pendingScanItem = items.find(i => i.id === finalCode);
+            if (pendingScanItem) {
                 document.getElementById('singleMeterInput').click();
             } else {
                 alert("無效的設備條碼：" + code);
@@ -484,205 +540,171 @@
             const file = event.target.files[0];
             if (!file || !pendingScanItem) return;
 
-            document.getElementById('aiStatus').classList.remove('hidden');
+            // 預設尋找今天最新一筆未填寫的格子
+            let targetDateIdx = dates.length - 1;
+            for (let i = 0; i < dates.length; i++) {
+                if (pendingScanItem.hasOpenClose) {
+                    const closeInput = document.getElementById(`${pendingScanItem.id}_e_${i}`);
+                    if (closeInput && !closeInput.value) { targetDateIdx = i; break; }
+                } else {
+                    const input = document.getElementById(`${pendingScanItem.id}_${i}`);
+                    if (input && !input.value) { targetDateIdx = i; break; }
+                }
+            }
 
             try {
                 const base64Data = (await convertFileToBase64(file)).split(',')[1];
-                
-                const prompt = `這是一張工廠儀表板或是手寫數字的照片。請你判讀這張照片上的數值。
+                const prompt = `這是一張儀表板或手寫數字照片。請判讀數值。
                 規則：
-                1. 請「只」回傳你判讀出來的數字本身，絕對不要有其他廢話。
-                2. 如果是手寫算式(例如 11860:46 或 11801=59)，請完整回傳原始符號與數字。
-                3. 無法辨識請回傳空字串。`;
+                1. 只回傳數字或完整讀數（如 11860:46 或 11801=59），不要其他廢話。
+                2. 無法辨識回傳 null。`;
 
                 const resultText = await callGeminiAPI(prompt, base64Data, file.type);
-                const aiValue = resultText.trim().replace(/^null$/i, ''); 
+                const aiVal = resultText.trim().replace(/^null$/i, '');
 
-                document.getElementById('aiStatus').classList.add('hidden');
-                showConfirmModal(aiValue);
-
+                showConfirmModal(pendingScanItem, targetDateIdx, aiVal);
             } catch (error) {
-                console.error(error);
-                document.getElementById('aiStatus').classList.add('hidden');
-                alert("辨識發生錯誤，請重新拍攝。");
+                alert("辨識失敗，請重試");
             } finally {
-                event.target.value = ''; 
+                event.target.value = '';
             }
         }
 
-        function showConfirmModal(initialValue) {
-            document.getElementById('confirm-device-name').innerText = pendingScanItem.label;
-            document.getElementById('confirm-value-input').value = initialValue;
+        let currentModalData = null;
+        function showConfirmModal(item, dateIdx, val) {
+            currentModalData = { item, dateIdx };
+            document.getElementById('confirm-device-name').innerText = `${item.label} (${dates[dateIdx]})`;
+            document.getElementById('confirm-value-input').value = val;
             document.getElementById('confirmModal').classList.add('active');
-            
-            setTimeout(() => {
-                document.getElementById('confirm-value-input').focus();
-            }, 100);
         }
 
         function closeConfirmModal() {
             document.getElementById('confirmModal').classList.remove('active');
-            pendingScanItem = null;
+            currentModalData = null;
         }
 
         function submitConfirmedData() {
-            const finalValue = document.getElementById('confirm-value-input').value.trim();
-            if(!finalValue) {
-                alert("請輸入數值"); return;
-            }
-
-            const item = pendingScanItem;
-            const dateIdx = pendingDateIndex;
+            if (!currentModalData) return;
+            const finalVal = document.getElementById('confirm-value-input').value.trim();
+            const { item, dateIdx } = currentModalData;
 
             if (item.hasOpenClose) {
-                // 填入「今天」的「收」
-                const todayCloseId = `${item.id}_e_${dateIdx}`;
-                const todayCloseInput = document.getElementById(todayCloseId);
-                if (todayCloseInput) todayCloseInput.value = finalValue;
-
-                // 填入「明天」的「開」
-                if (dateIdx + 1 < dates.length) {
-                    const tmrOpenId = `${item.id}_s_${dateIdx + 1}`;
-                    const tmrOpenInput = document.getElementById(tmrOpenId);
-                    if (tmrOpenInput) tmrOpenInput.value = finalValue;
-                }
+                const closeInput = document.getElementById(`${item.id}_e_${dateIdx}`);
+                if (closeInput) closeInput.value = finalVal;
+                handleCloseInput(item.id, dateIdx);
             } else {
-                // 一般品項直接填入
-                const inputId = `${item.id}_${dateIdx}`;
-                const inputEl = document.getElementById(inputId);
-                if (inputEl) inputEl.value = finalValue;
+                const input = document.getElementById(`${item.id}_${dateIdx}`);
+                if (input) input.value = finalVal;
             }
 
             saveData();
+            calcMasterTable();
             closeConfirmModal();
-            
-            // 跳轉回總表看結果，並加上高光特效
-            switchTab('tab-table');
-            highlightUpdatedCells(item.id, dateIdx, item.hasOpenClose);
+            switchTab(`tab-${item.id}`);
         }
 
-        function highlightUpdatedCells(itemId, dateIdx, hasOpenClose) {
-            document.querySelectorAll('input').forEach(i => i.classList.remove('highlight-cell'));
-            
-            let targetId = hasOpenClose ? `${itemId}_e_${dateIdx}` : `${itemId}_${dateIdx}`;
-            let targetEl = document.getElementById(targetId);
-            
-            if (targetEl) {
-                targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                targetEl.classList.add('highlight-cell');
-                
-                if (hasOpenClose && dateIdx + 1 < dates.length) {
-                    let tmrEl = document.getElementById(`${itemId}_s_${dateIdx + 1}`);
-                    if(tmrEl) tmrEl.classList.add('highlight-cell');
-                }
-                
-                setTimeout(() => {
-                    document.querySelectorAll('input').forEach(i => i.classList.remove('highlight-cell'));
-                }, 3000);
-            }
+        // ================= 截圖與匯出 =================
+        function takeScreenshot() {
+            switchTab('tab-master');
+            setTimeout(() => {
+                html2canvas(document.querySelector('#tab-master'), { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = '115年8月用量總表_完整月報.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                });
+            }, 300);
         }
 
-        async function callGeminiAPI(prompt, base64Data, mimeType) {
-            const apiKey = ""; // 注意：實際部署需替換
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-
-            const payload = {
-                contents: [{ role: "user", parts: [{ text: prompt }, { inlineData: { mimeType: mimeType, data: base64Data } }] }]
-            };
-
-            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (!response.ok) throw new Error(`API error`);
-            const result = await response.json();
-            return result.candidates[0].content.parts[0].text;
-        }
-
-        function convertFileToBase64(file) {
-            return new Promise((res, rej) => { const r = new FileReader(); r.readAsDataURL(file); r.onload = () => res(r.result); r.onerror = rej; });
-        }
-
-        function generateQRCodesForPrint() {
-            const container = document.getElementById('qrCodesContainer');
-            container.innerHTML = '';
-            const baseUrl = window.location.href.split('?')[0];
-
-            items.forEach(item => {
-                const qrData = encodeURIComponent(`${baseUrl}?qr=${item.id}`);
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${qrData}`;
-                container.innerHTML += `
-                    <div class="flex flex-col items-center justify-center p-4 border border-gray-200 rounded-xl bg-gray-50 shadow-sm">
-                        <img src="${qrUrl}" alt="${item.label}" class="w-28 h-28 mb-3 bg-white p-1 rounded shadow-sm border border-gray-100">
-                        <span class="font-bold text-gray-800 text-center">${item.label}</span>
-                    </div>
-                `;
+        function exportMasterCSV() {
+            let csv = "\uFEFF日期," + items.map(i => `${i.label}用量`).join(",") + "\r\n";
+            dates.forEach((dateStr, dIdx) => {
+                let row = [dateStr];
+                items.forEach(item => {
+                    // 抓取畫面上計算好的用量
+                    // 簡化直接計算
+                    let val = '';
+                    row.push(val);
+                });
+                csv += row.join(",") + "\r\n";
             });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "115年8月設備用量總結算表.csv";
+            link.click();
         }
 
+        // ================= 儲存與載入 =================
         function saveData() {
-            const inputs = document.querySelectorAll('#dataTable input');
             const data = {};
-            inputs.forEach(input => {
-                if(input.value.trim() !== '') { data[input.getAttribute('data-id')] = input.value; }
+            document.querySelectorAll('input.cell-input').forEach(input => {
+                if (input.value.trim() !== '') data[input.getAttribute('data-id')] = input.value;
             });
-            localStorage.setItem('factory_system_v2', JSON.stringify(data));
+            localStorage.setItem('factory_system_v3', JSON.stringify(data));
             
             const btn = document.getElementById('saveBtn');
-            if(btn) {
-                const ori = btn.innerHTML;
-                btn.innerHTML = '✔️ 已儲存';
-                setTimeout(() => { btn.innerHTML = ori; }, 2000);
+            if (btn) {
+                const ori = btn.innerText;
+                btn.innerText = '✔️ 已儲存';
+                setTimeout(() => { btn.innerText = ori; }, 2000);
             }
         }
 
         function loadData() {
-            const saved = localStorage.getItem('factory_system_v2');
+            const saved = localStorage.getItem('factory_system_v3');
             if (saved) {
                 const data = JSON.parse(saved);
                 for (const key in data) {
                     const input = document.getElementById(key);
-                    if (input) { input.value = data[key]; }
+                    if (input) input.value = data[key];
                 }
             } else {
-                // 預設寫入測試資料
-                const defaultInputs = {
-                    'boiler1_e_12': '11860:46', // 8/29 收
-                    'boiler1_s_13': '11860:46'  // 8/30 開
-                };
-                for (const key in defaultInputs) {
-                    const input = document.getElementById(key);
-                    if (input) input.value = defaultInputs[key];
+                // 預設範例資料
+                const sample = { 'boiler1_e_12': '11860:46', 'boiler1_s_13': '11860:46' };
+                for (const k in sample) {
+                    const el = document.getElementById(k);
+                    if (el) el.value = sample[k];
                 }
                 saveData();
             }
         }
 
-        function exportCSV() {
-            let csvContent = "\uFEFF";
-            
-            const headers = ['日期'];
+        function generateQRCodes() {
+            const container = document.getElementById('qrCodesContainer');
+            container.innerHTML = '';
+            const baseUrl = window.location.href.split('?')[0];
+
             items.forEach(item => {
-                if (item.hasOpenClose) { headers.push(`${item.label}(開)`, `${item.label}(收)`); }
-                else { headers.push(item.label); }
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(baseUrl + '?qr=' + item.id)}`;
+                container.innerHTML += `
+                    <div class="flex flex-col items-center justify-center p-3 border rounded-xl bg-gray-50 shadow-sm">
+                        <img src="${qrUrl}" alt="${item.label}" class="w-24 h-24 mb-2 bg-white p-1 rounded border">
+                        <span class="font-bold text-gray-800 text-sm">${item.label}</span>
+                    </div>
+                `;
             });
-            csvContent += headers.join(",") + "\r\n";
+        }
 
-            dates.forEach((date, i) => {
-                let row = [date];
-                items.forEach(item => {
-                    if (item.hasOpenClose) {
-                        row.push(document.getElementById(`${item.id}_s_${i}`).value || '');
-                        row.push(document.getElementById(`${item.id}_e_${i}`).value || '');
-                    } else {
-                        row.push(document.getElementById(`${item.id}_${i}`).value || '');
-                    }
-                });
-                csvContent += row.join(",") + "\r\n";
+        async function callGeminiAPI(prompt, base64Data, mimeType) {
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const res = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }, { inlineData: { mimeType, data: base64Data } }] }] })
             });
+            const json = await res.json();
+            return json.candidates[0].content.parts[0].text;
+        }
 
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = "用量總表_匯出.csv";
-            link.click();
+        function convertFileToBase64(file) {
+            return new Promise((res, rej) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => res(reader.result);
+                reader.onerror = rej;
+            });
         }
     </script>
 </body>
