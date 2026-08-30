@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智慧收尾用量系統 (115年8月份)</title>
+    <title>智慧收尾用量系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
@@ -16,7 +16,6 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         
-        /* 檔案夾風格分頁標籤 (支援多個分頁自動換行) */
         .nav-tabs-container {
             display: flex;
             flex-wrap: wrap;
@@ -65,7 +64,6 @@
             border-top: none;
         }
 
-        /* 絕對精準對齊的單品項表格設定 */
         table.fixed-table {
             width: 100%;
             border-collapse: collapse;
@@ -93,7 +91,6 @@
             padding: 10px 4px;
         }
 
-        /* 總表多欄位表格 */
         table.master-table {
             width: max-content;
             min-width: 100%;
@@ -162,8 +159,7 @@
 </head>
 <body class="text-gray-800">
 
-    <!-- 頂部標題列 -->
-    <nav class="bg-white shadow-sm border-b border-gray-200" id="topNav">
+    <nav class="bg-white shadow-sm border-b border-gray-200">
         <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center gap-2">
@@ -178,22 +174,14 @@
         </div>
     </nav>
 
-    <div class="max-w-[1600px] mx-auto p-4 md:p-6" id="mainContainer">
+    <div class="max-w-[1600px] mx-auto p-4 md:p-6">
         
-        <!-- 11個分頁標籤導覽 (總表 + 10個品項) -->
-        <div class="nav-tabs-container" id="navTabsContainer">
-            <!-- JS 動態生成分頁按鈕 -->
-        </div>
-        
-        <!-- ================= 容器：分頁內容 ================= -->
-        <div id="tabsContentContainer">
-            <!-- JS 動態生成各個分頁的內容畫面 -->
-        </div>
+        <div class="nav-tabs-container" id="navTabsContainer"></div>
+        <div id="tabsContentContainer"></div>
 
     </div>
 
     <script>
-        // 完整的 8/1 - 8/31 日期定義
         const dates = [];
         for (let d = 1; d <= 31; d++) {
             const dayStr = d < 10 ? `0${d}` : `${d}`;
@@ -203,7 +191,6 @@
             dates.push(`08/${dayStr} (${wday})`);
         }
 
-        // 10 個核心品項定義
         const items = [
             { id: 'boiler1', label: '蒸氣高燃鍋爐', hasOpenClose: true },
             { id: 'boiler2', label: '蒸氣鍋爐2', hasOpenClose: true },
@@ -222,7 +209,6 @@
             loadData();
         };
 
-        // 動態生成 11 個分頁與畫面的核心函式
         function buildTabsAndViews() {
             const tabsContainer = document.getElementById('navTabsContainer');
             const contentContainer = document.getElementById('tabsContentContainer');
@@ -230,7 +216,7 @@
             tabsContainer.innerHTML = '';
             contentContainer.innerHTML = '';
 
-            // 1. 建立「總表」分頁按鈕與內容
+            // 1. 總表
             tabsContainer.innerHTML += `
                 <button onclick="switchTab('tab-master')" id="btn-tab-master" class="nav-tab active">
                     📊 8/1-8/31 用量總表
@@ -242,19 +228,19 @@
                     <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
                         <h2 class="text-xl font-bold text-gray-700">📅 115年8月份設備用量總結算表 (8/1 - 8/31)</h2>
                         <div class="flex flex-wrap gap-2">
-                            <button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium transition-colors flex items-center gap-1">
+                            <button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">
                                 📸 截圖 LINE 傳老闆
                             </button>
-                            <button onclick="saveData()" id="saveBtn" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium transition-colors flex items-center gap-1">
+                            <button onclick="saveData()" id="saveBtn" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">
                                 💾 暫存資料
                             </button>
-                            <button onclick="exportMasterCSV()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow text-sm font-medium transition-colors flex items-center gap-1">
+                            <button onclick="exportMasterCSV()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">
                                 📊 匯出總表 Excel
                             </button>
                         </div>
                     </div>
 
-                    <div class="table-container" id="masterTableContainer">
+                    <div class="table-container">
                         <table class="master-table" id="masterTable">
                             <thead>
                                 <tr>
@@ -262,15 +248,13 @@
                                     ${items.map(item => `<th class="col-std">${item.label}用量</th>`).join('')}
                                 </tr>
                             </thead>
-                            <tbody id="masterTableBody">
-                                <!-- JS 動態計算用量 -->
-                            </tbody>
+                            <tbody id="masterTableBody"></tbody>
                         </table>
                     </div>
                 </div>
             `;
 
-            // 2. 建立 10 個獨立品項分頁按鈕與內容
+            // 2. 10 個獨立品項分頁
             items.forEach(item => {
                 const tabId = `tab-${item.id}`;
                 tabsContainer.innerHTML += `
@@ -305,7 +289,7 @@
                                                 <tr>
                                                     <td class="font-semibold bg-gray-50">${dateStr}</td>
                                                     <td><input type="text" class="cell-input" id="${item.id}_s_${dIdx}" data-id="${item.id}_s_${dIdx}" oninput="calcMasterTable()" placeholder="例: 11801:59"></td>
-                                                    <td><input type="text" class="cell-input" id="${item.id}_e_${dIdx}" data-id="${item.id}_e_${dIdx}" oninput="handleCloseInput('${item.id}', ${dIdx})" placeholder="例: 11806:55"></td>
+                                                    <td><input type="text" class="cell-input" id="${item.id}_e_${dIdx}" data-id="${item.id}_e_${dIdx}" oninput="handleCloseInput('${item.id}', ${dIdx})" placeholder="例: 11860:46"></td>
                                                 </tr>
                                             `;
                                         } else {
@@ -339,7 +323,7 @@
             }
         }
 
-        // ================= 自動連動開收邏輯 (收的數值自動帶入隔天開) =================
+        // 開收自動連動：收的數值自動帶入隔天開
         function handleCloseInput(itemId, dIdx) {
             const closeVal = document.getElementById(`${itemId}_e_${dIdx}`).value;
             if (dIdx + 1 < dates.length) {
@@ -352,7 +336,7 @@
             saveData();
         }
 
-        // ================= 總表用量計算邏輯 =================
+        // 總表用量計算
         function calcMasterTable() {
             const tbody = document.getElementById('masterTableBody');
             tbody.innerHTML = '';
@@ -408,21 +392,10 @@
             return parseFloat(str);
         }
 
-        // ================= 截圖與匯出 =================
         function takeScreenshot() {
             switchTab('tab-master');
-            const container = document.getElementById('masterTableContainer');
-            const originalMaxHeight = container.style.maxHeight;
-            const originalOverflow = container.style.overflow;
-            
-            container.style.maxHeight = 'none';
-            container.style.overflow = 'visible';
-
             setTimeout(() => {
                 html2canvas(document.querySelector('#tab-master'), { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
-                    container.style.maxHeight = originalMaxHeight;
-                    container.style.overflow = originalOverflow;
-
                     const link = document.createElement('a');
                     link.download = '115年8月用量總表_完整月報.png';
                     link.href = canvas.toDataURL('image/png');
@@ -433,12 +406,6 @@
 
         function exportMasterCSV() {
             let csv = "\uFEFF日期," + items.map(i => `${i.label}用量`).join(",") + "\r\n";
-            dates.forEach((dateStr, dIdx) => {
-                let row = [dateStr];
-                items.forEach(item => {
-                    row.push('');
-                });
-            });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
@@ -446,13 +413,12 @@
             link.click();
         }
 
-        // ================= 儲存與載入 =================
         function saveData() {
             const data = {};
             document.querySelectorAll('input.cell-input').forEach(input => {
                 if (input.value.trim() !== '') data[input.getAttribute('data-id')] = input.value;
             });
-            localStorage.setItem('factory_system_v3', JSON.stringify(data));
+            localStorage.setItem('factory_system_v4', JSON.stringify(data));
             
             const btn = document.getElementById('saveBtn');
             if (btn) {
@@ -463,22 +429,15 @@
         }
 
         function loadData() {
-            const saved = localStorage.getItem('factory_system_v3');
+            const saved = localStorage.getItem('factory_system_v4');
             if (saved) {
                 const data = JSON.parse(saved);
                 for (const key in data) {
                     const input = document.getElementById(key);
                     if (input) input.value = data[key];
                 }
-            } else {
-                // 預設範例資料：8/29 收 11860:46，自動連動 8/30 開 11860:46
-                const sample = { 'boiler1_e_12': '11860:46', 'boiler1_s_13': '11860:46' };
-                for (const k in sample) {
-                    const el = document.getElementById(k);
-                    if (el) el.value = sample[k];
-                }
-                saveData();
             }
+            calcMasterTable();
         }
     </script>
 </body>
