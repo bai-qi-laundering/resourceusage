@@ -22,12 +22,15 @@
         th {
             position: sticky;
             top: 0;
-            background-color: #1f2937;
-            color: white;
+            background-color: #dbeafe; /* 淡藍色背景 */
+            color: #000000 !important; /* 強制純黑色字體 */
+            font-weight: 900 !important; /* 強制特粗體 */
+            font-size: 15px; /* 字體稍微放大 */
             z-index: 10;
-            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.15);
             white-space: nowrap; 
             min-height: 40px;
+            border-bottom: 2px solid #93c5fd; /* 底部淡藍色粗線 */
         }
         
         .col-date {
@@ -41,7 +44,8 @@
 
         th.col-date {
             z-index: 15;
-            background-color: #111827;
+            background-color: #bfdbfe; /* 左上角日期欄位用稍微深一點的藍色區隔 */
+            border-right: 2px solid #93c5fd;
         }
 
         input {
@@ -86,7 +90,7 @@
     <div class="max-w-[1600px] mx-auto bg-white rounded-xl shadow-lg p-4 md:p-6">
         
         <!-- 頭部區塊 -->
-        <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+        <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4" data-html2canvas-ignore>
             <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -101,19 +105,19 @@
                 <button onclick="exportCSV()" class="flex items-center gap-1 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded shadow text-sm font-medium transition-colors">
                     📊 匯出 Excel
                 </button>
-                <button onclick="window.print()" class="flex items-center gap-1 px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded shadow text-sm font-medium transition-colors">
-                    🖨️ 列印報表
+                <button onclick="takeScreenshot()" id="screenshotBtn" class="flex items-center gap-1 px-3 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded shadow text-sm font-medium transition-colors">
+                    📸 截圖上傳LINE
                 </button>
             </div>
         </div>
 
+        <!-- 截圖時顯示的標題 (平常隱藏) -->
+        <h1 class="text-2xl font-bold text-gray-800 text-center mb-4 hidden" id="print-title">
+            115年8月份收尾用量整合表
+        </h1>
+
         <!-- 智慧操作區 -->
-        <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-4 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div class="flex items-center gap-3 w-full md:w-auto">
-                <label class="font-bold text-indigo-800 whitespace-nowrap">📍 選擇輸入日期：</label>
-                <select id="targetDate" class="p-2 rounded border border-indigo-300 bg-white font-medium text-gray-700 outline-none focus:border-indigo-500">
-                    <!-- Javascript 自動生成日期選項 -->
-                </select>
+        <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-4 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between" data-html2canvas-ignore>
             </div>
             
             <div class="flex flex-wrap gap-3 w-full md:w-auto justify-end">
@@ -143,32 +147,52 @@
         <input type="file" id="singleMeterInput" accept="image/*" capture="environment" class="hidden" onchange="handleSingleMeterUpload(event)">
 
         <!-- 表格區塊 -->
-        <div class="table-container border border-gray-300 rounded-lg shadow-inner">
+        <div class="table-container border border-gray-300 rounded-lg shadow-inner" id="table-container-div">
             <table class="w-full text-sm text-left whitespace-nowrap" id="dataTable">
                 <thead>
                     <tr>
                         <th class="px-4 py-3 col-date text-center">日期</th>
-                        <th class="px-3 py-3 border-x border-gray-600 text-center">鍋1</th>
-                        <th class="px-3 py-3 border-x border-gray-600 text-center">鍋2</th>
-                        <th class="px-3 py-3 border-x border-gray-600 text-center">瓦1</th>
-                        <th class="px-3 py-3 border-x border-gray-600 text-center">瓦2</th>
-                        <th class="px-3 py-3 border-x border-gray-600 text-center">小水</th>
-                        <th class="px-3 py-3 border-x border-gray-600 text-center">大水</th>
-                        <th class="px-3 py-3 border-x border-gray-600 text-center">錳砂</th>
-                        <th class="px-3 py-3 border-x border-gray-600 text-center">TB-60K</th>
-                        <th class="px-3 py-3 border-x border-gray-600 text-center">TB-80K</th>
-                        <th class="px-3 py-3 border-x border-gray-600 text-center">TF-30K</th>
-                        <th class="px-3 py-3 border-x border-gray-600 text-center">撐開</th>
-                        <th class="px-3 py-3 border-x border-gray-600 text-center">ICC 枕套</th>
-                        <th class="px-3 py-3 border-x border-gray-600 text-center">ICC 平面</th>
-                        <th class="px-3 py-3 border-x border-gray-600 text-center">大白</th>
-                        <th class="px-3 py-3 border-x border-gray-600 text-center">小白</th>
+                        <th class="px-3 py-3 border-x border-blue-200 text-center">鍋1</th>
+                        <th class="px-3 py-3 border-x border-blue-200 text-center">鍋2</th>
+                        <th class="px-3 py-3 border-x border-blue-200 text-center">瓦1</th>
+                        <th class="px-3 py-3 border-x border-blue-200 text-center">瓦2</th>
+                        <th class="px-3 py-3 border-x border-blue-200 text-center">小水</th>
+                        <th class="px-3 py-3 border-x border-blue-200 text-center">大水</th>
+                        <th class="px-3 py-3 border-x border-blue-200 text-center">錳砂</th>
+                        <th class="px-3 py-3 border-x border-blue-200 text-center">TB-60K</th>
+                        <th class="px-3 py-3 border-x border-blue-200 text-center">TB-80K</th>
+                        <th class="px-3 py-3 border-x border-blue-200 text-center">TF-30K</th>
+                        <th class="px-3 py-3 border-x border-blue-200 text-center">撐開</th>
+                        <th class="px-3 py-3 border-x border-blue-200 text-center">ICC 枕套</th>
+                        <th class="px-3 py-3 border-x border-blue-200 text-center">ICC 平面</th>
+                        <th class="px-3 py-3 border-x border-blue-200 text-center">大白</th>
+                        <th class="px-3 py-3 border-x border-blue-200 text-center">小白</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody" class="bg-white">
                     <!-- Javascript 生成內容 -->
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- 截圖預覽 Modal -->
+    <div id="screenshotModal" class="modal">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-5xl mx-4 max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-gray-800">📸 報表截圖預覽</h2>
+                <button onclick="closeScreenshotModal()" class="text-gray-500 hover:text-red-500 font-bold text-xl">&times;</button>
+            </div>
+            <p class="text-sm text-gray-500 mb-4">您可以長按(或右鍵)下方圖片並選擇「複製圖片」，然後直接貼到 LINE 群組回報給老闆。</p>
+            <div class="flex-grow overflow-auto border rounded bg-gray-100 flex justify-center items-start p-2">
+                <img id="screenshotPreview" src="" alt="報表截圖" class="max-w-full h-auto shadow-md">
+            </div>
+            <div class="mt-4 flex justify-end gap-3">
+                <a id="downloadScreenshotBtn" href="#" download="115年8月收尾用量整合表.png" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded shadow">
+                    💾 下載圖片檔案
+                </a>
+                <button onclick="closeScreenshotModal()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded shadow">關閉</button>
+            </div>
         </div>
     </div>
 
@@ -239,6 +263,14 @@
             initDateSelector();
             loadData();
             generateQRCodesForPrint();
+            
+            // 新增：偵測是否從手機原生相機掃描 QR Code 連進來
+            const urlParams = new URLSearchParams(window.location.search);
+            const qrParam = urlParams.get('qr');
+            if (qrParam) {
+                // 稍微延遲讓畫面載入，然後自動觸發拍照流程
+                setTimeout(() => handleQRScanned(qrParam), 600);
+            }
         };
 
         function initDateSelector() {
@@ -318,8 +350,14 @@
         }
 
         function handleQRScanned(scannedCode) {
+            // 處理包含網址的 QR Code，把最後的代號抓出來 (例如 ?qr=wa1 -> wa1)
+            let finalCode = scannedCode;
+            if (scannedCode.includes('?qr=')) {
+                finalCode = scannedCode.split('?qr=')[1];
+            }
+
             // 檢查掃描到的代碼是否在我們的欄位定義中
-            const matchedCol = cols.find(c => c.id === scannedCode);
+            const matchedCol = cols.find(c => c.id === finalCode);
             if (matchedCol) {
                 currentTargetColId = matchedCol.id;
                 // 自動觸發相機拍攝儀表板
@@ -477,8 +515,14 @@
         function generateQRCodesForPrint() {
             const container = document.getElementById('qrCodesContainer');
             container.innerHTML = '';
+            
+            // 取得您目前的網址，讓 QR Code 帶有這個網頁的專屬連結
+            const baseUrl = window.location.href.split('?')[0];
+
             cols.forEach(col => {
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${col.id}`;
+                // 將網址與欄位代號結合，變成例如： https://bai-qi.../?qr=wa1
+                const qrData = encodeURIComponent(`${baseUrl}?qr=${col.id}`);
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${qrData}`;
                 container.innerHTML += `
                     <div class="flex flex-col items-center p-3 border rounded">
                         <img src="${qrUrl}" alt="${col.label} QR Code" class="w-24 h-24 mb-2">
@@ -531,6 +575,76 @@
             link.href = URL.createObjectURL(blob);
             link.download = "115年8月收尾用量整合表.csv";
             link.click();
+        }
+
+        // ================= 截圖功能 =================
+        function takeScreenshot() {
+            // 需要先載入 html2canvas 套件 (已在 head 區塊加入)
+            if (typeof html2canvas === 'undefined') {
+                const script = document.createElement('script');
+                script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+                script.onload = executeScreenshot;
+                document.head.appendChild(script);
+            } else {
+                executeScreenshot();
+            }
+        }
+
+        function executeScreenshot() {
+            const btn = document.getElementById('screenshotBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ 處理中...';
+            
+            const tableContainer = document.getElementById('table-container-div');
+            // 記住原本的捲動狀態
+            const originalMaxHeight = tableContainer.style.maxHeight;
+            const originalOverflowY = tableContainer.style.overflowY;
+            
+            // 為了截到「整個月份」的資料，我們暫時把表格展開到最大，取消捲軸
+            tableContainer.style.maxHeight = 'none';
+            tableContainer.style.overflowY = 'visible';
+            
+            // 顯示上方標題，隱藏不需要截圖的操作按鈕 (利用 data-html2canvas-ignore 屬性)
+            document.getElementById('print-title').classList.remove('hidden');
+            
+            // 美化截圖：把輸入框的邊框拿掉，看起來像一張真正的報表
+            const inputs = document.querySelectorAll('#dataTable input');
+            inputs.forEach(input => {
+                input.style.border = 'none';
+                input.style.backgroundColor = 'transparent';
+            });
+
+            // 等待一點時間讓瀏覽器套用上述的 CSS 變更
+            setTimeout(() => {
+                // 將包裹表格的區塊截圖
+                html2canvas(document.querySelector('.max-w-\\[1600px\\]'), {
+                    scale: 2, // 提高畫質，老闆放大看才不會模糊
+                    backgroundColor: '#ffffff'
+                }).then(canvas => {
+                    // 截圖完成，把所有樣式恢復原狀
+                    tableContainer.style.maxHeight = originalMaxHeight;
+                    tableContainer.style.overflowY = originalOverflowY;
+                    document.getElementById('print-title').classList.add('hidden');
+                    inputs.forEach(input => {
+                        input.style.border = '';
+                        input.style.backgroundColor = '';
+                    });
+                    
+                    // 轉成圖片 URL
+                    const image = canvas.toDataURL("image/png");
+                    
+                    // 顯示在彈出視窗中
+                    document.getElementById('screenshotPreview').src = image;
+                    document.getElementById('downloadScreenshotBtn').href = image;
+                    document.getElementById('screenshotModal').classList.add('active');
+                    
+                    btn.innerHTML = originalText;
+                });
+            }, 300); 
+        }
+
+        function closeScreenshotModal() {
+            document.getElementById('screenshotModal').classList.remove('active');
         }
     </script>
 </body>
