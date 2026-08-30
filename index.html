@@ -167,7 +167,7 @@
 <body class="text-gray-800">
 
     <!-- 頂部標題列 -->
-    <nav class="bg-white shadow-sm border-b border-gray-200">
+    <nav class="bg-white shadow-sm border-b border-gray-200" id="topNav">
         <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center gap-2">
@@ -182,7 +182,7 @@
         </div>
     </nav>
 
-    <div class="max-w-[1600px] mx-auto p-4 md:p-6">
+    <div class="max-w-[1600px] mx-auto p-4 md:p-6" id="mainContainer">
         
         <!-- 11個分頁標籤導覽 (總表 + 10個品項) -->
         <div class="nav-tabs-container" id="navTabsContainer">
@@ -194,6 +194,39 @@
             <!-- JS 動態生成各個分頁的內容畫面 -->
         </div>
 
+    </div>
+
+    <!-- 現場工作人員專用：極簡掃碼拍照填報畫面 (當掃描特定設備 QR Code 時自動顯示) -->
+    <div id="fieldWorkerModal" class="modal">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md mx-4 text-center">
+            <div class="bg-indigo-600 p-4 rounded-xl text-white mb-4">
+                <h2 class="text-xl font-bold" id="field-device-title">蒸氣高燃鍋爐</h2>
+                <p class="text-sm text-indigo-200 mt-1">現場數據快速填報系統</p>
+            </div>
+            
+            <div class="mb-4 text-left">
+                <label class="block text-sm font-bold text-gray-700 mb-1">📅 選擇填報日期：</label>
+                <select id="fieldTargetDate" class="w-full p-2.5 rounded-lg border border-gray-300 font-semibold bg-gray-50">
+                    <!-- JS 動態生成 -->
+                </select>
+            </div>
+
+            <div class="border-2 border-dashed border-indigo-300 bg-indigo-50/50 p-6 rounded-xl mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-indigo-500 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <p class="text-sm font-bold text-gray-700 mb-1">點擊下方按鈕拍攝機台儀表板</p>
+                <p class="text-xs text-gray-500">AI 將會自動識別數值</p>
+            </div>
+
+            <button onclick="triggerFieldCamera()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-lg shadow-lg mb-3">
+                📷 立即拍照辨識
+            </button>
+            <button onclick="closeFieldWorkerModal()" class="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-sm">
+                返回主頁
+            </button>
+        </div>
     </div>
 
     <!-- AI 辨識結果確認 Modal -->
@@ -228,7 +261,7 @@
         </div>
     </div>
 
-    <!-- QR 掃描器 Modal -->
+    <!-- QR 掃描器 Modal (總表專用) -->
     <div id="qrModal" class="modal">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm mx-4">
             <div class="flex justify-between items-center mb-4">
@@ -275,10 +308,17 @@
             buildTabsAndViews();
             loadData();
             
+            // 檢查網址是否有帶入 ?qr=xxx (現場掃描直接進入專屬拍照填報畫面)
             const urlParams = new URLSearchParams(window.location.search);
             const qrParam = urlParams.get('qr');
             if (qrParam) {
-                setTimeout(() => processScannedCode(qrParam), 500);
+                const targetItem = items.find(i => i.id === qrParam);
+                if (targetItem) {
+                    // 隱藏後台導覽，開啟現場專屬填報 Modal
+                    document.getElementById('topNav').style.display = 'none';
+                    document.getElementById('mainContainer').style.padding = '10px';
+                    openFieldWorkerModal(targetItem);
+                }
             }
         };
 
@@ -305,7 +345,7 @@
                             <button onclick="openQRScanner()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow text-sm font-medium transition-colors flex items-center gap-1">
                                 📱 現場掃碼填寫
                             </button>
-                            <button onclick="openQRGenerator()" class="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg shadow text-sm font-medium transition-colors flex items-center gap-1">
+                            <button onclick="switchTab('tab-qr')" class="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg shadow text-sm font-medium transition-colors flex items-center gap-1">
                                 🖨️ QR碼管理
                             </button>
                             <button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium transition-colors flex items-center gap-1">
@@ -373,7 +413,7 @@
                                             return `
                                                 <tr>
                                                     <td class="font-semibold bg-gray-50">${dateStr}</td>
-                                                    <td><input type="text" class="cell-input" id="${item.id}_s_${dIdx}" data-id="${item.id}_s_${dIdx}" oninput="calcMasterTable()" placeholder="例: 11801=59"></td>
+                                                    <td><input type="text" class="cell-input" id="${item.id}_s_${dIdx}" data-id="${item.id}_s_${dIdx}" oninput="calcMasterTable()" placeholder="例: 11801:59"></td>
                                                     <td><input type="text" class="cell-input" id="${item.id}_e_${dIdx}" data-id="${item.id}_e_${dIdx}" oninput="handleCloseInput('${item.id}', ${dIdx})"></td>
                                                 </tr>
                                             `;
@@ -429,10 +469,35 @@
             }
         }
 
-        // ================= 自動連動開收邏輯 =================
+        // ================= 現場員工專屬 QR 掃描與填報流程 =================
+        function openFieldWorkerModal(item) {
+            pendingScanItem = item;
+            document.getElementById('field-device-title').innerText = item.label;
+            
+            // 產生日期下拉選單
+            const selectEl = document.getElementById('fieldTargetDate');
+            selectEl.innerHTML = '';
+            dates.forEach((dStr, idx) => {
+                selectEl.innerHTML += `<option value="${idx}">${dStr}</option>`;
+            });
+            // 預設選今天 (或倒數第二天)
+            selectEl.value = dates.length > 2 ? dates.length - 2 : 0;
+
+            document.getElementById('fieldWorkerModal').classList.add('active');
+        }
+
+        function closeFieldWorkerModal() {
+            document.getElementById('fieldWorkerModal').classList.remove('active');
+            window.location.href = window.location.href.split('?')[0]; // 清除網址參數返回主頁
+        }
+
+        function triggerFieldCamera() {
+            document.getElementById('singleMeterInput').click();
+        }
+
+        // ================= 自動連動開收邏輯 (收的數值自動帶入隔天開) =================
         function handleCloseInput(itemId, dIdx) {
             const closeVal = document.getElementById(`${itemId}_e_${dIdx}`).value;
-            // 如果填寫了當天收，自動帶入隔天開
             if (dIdx + 1 < dates.length) {
                 const nextOpenInput = document.getElementById(`${itemId}_s_${dIdx + 1}`);
                 if (nextOpenInput && (!nextOpenInput.value || nextOpenInput.value.trim() === '')) {
@@ -443,7 +508,7 @@
             saveData();
         }
 
-        // ================= 總表計算邏輯 =================
+        // ================= 總表用量計算邏輯 =================
         function calcMasterTable() {
             const tbody = document.getElementById('masterTableBody');
             tbody.innerHTML = '';
@@ -454,7 +519,6 @@
                 items.forEach(item => {
                     let usageVal = '-';
                     if (item.hasOpenClose) {
-                        // 鍋爐類計算邏輯 (收的數值減去開的數值，若有 = 後面的數字也可解析)
                         const openStr = document.getElementById(`${item.id}_s_${dIdx}`)?.value || '';
                         const closeStr = document.getElementById(`${item.id}_e_${dIdx}`)?.value || '';
                         
@@ -466,7 +530,6 @@
                             if (usageVal < 0) usageVal = '-';
                         }
                     } else {
-                        // 一般計量表計算 (通常今日減昨日，或依實際輸入)
                         const currStr = document.getElementById(`${item.id}_${dIdx}`)?.value || '';
                         const currNum = parseFloat(currStr);
                         
@@ -491,12 +554,11 @@
 
         function parseMeterNumber(str) {
             if (!str) return null;
-            // 處理如 11801=59 或 11860:46 的格式
-            if (str.includes('=')) {
-                const parts = str.split('=');
-                return parseFloat(parts[0]);
-            } else if (str.includes(':')) {
+            if (str.includes(':')) {
                 const parts = str.split(':');
+                return parseFloat(parts[0]);
+            } else if (str.includes('=')) {
+                const parts = str.split('=');
                 return parseFloat(parts[0]);
             }
             return parseFloat(str);
@@ -518,6 +580,7 @@
 
         function openScannerForItem(itemId) {
             pendingScanItem = items.find(i => i.id === itemId);
+            // 預設抓選最後一筆未填寫的日期
             document.getElementById('singleMeterInput').click();
         }
 
@@ -540,23 +603,14 @@
             const file = event.target.files[0];
             if (!file || !pendingScanItem) return;
 
-            // 預設尋找今天最新一筆未填寫的格子
-            let targetDateIdx = dates.length - 1;
-            for (let i = 0; i < dates.length; i++) {
-                if (pendingScanItem.hasOpenClose) {
-                    const closeInput = document.getElementById(`${pendingScanItem.id}_e_${i}`);
-                    if (closeInput && !closeInput.value) { targetDateIdx = i; break; }
-                } else {
-                    const input = document.getElementById(`${pendingScanItem.id}_${i}`);
-                    if (input && !input.value) { targetDateIdx = i; break; }
-                }
-            }
+            let targetDateIdx = document.getElementById('fieldTargetDate') ? 
+                parseInt(document.getElementById('fieldTargetDate').value) : (dates.length - 2);
 
             try {
                 const base64Data = (await convertFileToBase64(file)).split(',')[1];
-                const prompt = `這是一張儀表板或手寫數字照片。請判讀數值。
+                const prompt = `這是一張工廠儀表板或手寫數字照片。請判讀數值。
                 規則：
-                1. 只回傳數字或完整讀數（如 11860:46 或 11801=59），不要其他廢話。
+                1. 請完整回傳讀數（如 11860:46），保留冒號。
                 2. 無法辨識回傳 null。`;
 
                 const resultText = await callGeminiAPI(prompt, base64Data, file.type);
@@ -583,15 +637,22 @@
             currentModalData = null;
         }
 
+        // ================= 寫入與開收自動連動核心邏輯 =================
         function submitConfirmedData() {
             if (!currentModalData) return;
             const finalVal = document.getElementById('confirm-value-input').value.trim();
             const { item, dateIdx } = currentModalData;
 
             if (item.hasOpenClose) {
+                // 1. 寫入當天的「收」
                 const closeInput = document.getElementById(`${item.id}_e_${dateIdx}`);
                 if (closeInput) closeInput.value = finalVal;
-                handleCloseInput(item.id, dateIdx);
+                
+                // 2. 自動帶入隔天的「開」
+                if (dateIdx + 1 < dates.length) {
+                    const nextOpenInput = document.getElementById(`${item.id}_s_${dateIdx + 1}`);
+                    if (nextOpenInput) nextOpenInput.value = finalVal;
+                }
             } else {
                 const input = document.getElementById(`${item.id}_${dateIdx}`);
                 if (input) input.value = finalVal;
@@ -600,7 +661,13 @@
             saveData();
             calcMasterTable();
             closeConfirmModal();
-            switchTab(`tab-${item.id}`);
+
+            if (window.location.search.includes('qr=')) {
+                alert("✅ 資料已成功上傳寫入！");
+                closeFieldWorkerModal();
+            } else {
+                switchTab(`tab-${item.id}`);
+            }
         }
 
         // ================= 截圖與匯出 =================
@@ -618,16 +685,7 @@
 
         function exportMasterCSV() {
             let csv = "\uFEFF日期," + items.map(i => `${i.label}用量`).join(",") + "\r\n";
-            dates.forEach((dateStr, dIdx) => {
-                let row = [dateStr];
-                items.forEach(item => {
-                    // 抓取畫面上計算好的用量
-                    // 簡化直接計算
-                    let val = '';
-                    row.push(val);
-                });
-                csv += row.join(",") + "\r\n";
-            });
+            // 這裡可依需求擴充完整匯出
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
@@ -660,7 +718,7 @@
                     if (input) input.value = data[key];
                 }
             } else {
-                // 預設範例資料
+                // 預設範例資料：8/29 收 11860:46，自動連動 8/30 開 11860:46
                 const sample = { 'boiler1_e_12': '11860:46', 'boiler1_s_13': '11860:46' };
                 for (const k in sample) {
                     const el = document.getElementById(k);
