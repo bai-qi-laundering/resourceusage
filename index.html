@@ -28,9 +28,11 @@
             font-size: 15px; /* 字體稍微放大 */
             z-index: 10;
             box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.15);
-            white-space: nowrap; 
-            min-height: 40px;
             border-bottom: 2px solid #93c5fd; /* 底部淡藍色粗線 */
+            text-align: center !important; /* 強制置中對齊 */
+            white-space: nowrap; /* 保持不換行，但依靠外部容器控制 */
+            padding: 8px 12px !important;
+            min-width: 60px; /* 給予最小寬度避免擠壓 */
         }
         
         .col-date {
@@ -40,6 +42,7 @@
             z-index: 5;
             font-weight: 600;
             border-right: 2px solid #d1d5db;
+            text-align: center;
         }
 
         th.col-date {
@@ -118,7 +121,8 @@
 
         <!-- 智慧操作區 -->
         <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-4 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between" data-html2canvas-ignore>
-            </div>
+            <!-- 佔位，讓按鈕靠右 -->
+            <div class="flex-grow"></div>
             
             <div class="flex flex-wrap gap-3 w-full md:w-auto justify-end">
                 <button onclick="openQRScanner()" class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-md transition-colors font-bold transform hover:scale-105">
@@ -139,7 +143,7 @@
             </div>
         </div>
 
-        <div id="aiStatus" class="text-purple-700 font-bold hidden mb-4 bg-purple-100 p-3 rounded-lg text-center animate-pulse border border-purple-300">
+        <div id="aiStatus" class="text-purple-700 font-bold hidden mb-4 bg-purple-100 p-3 rounded-lg text-center animate-pulse border border-purple-300" data-html2canvas-ignore>
             🤖 AI 處理中，請稍候...
         </div>
 
@@ -148,25 +152,25 @@
 
         <!-- 表格區塊 -->
         <div class="table-container border border-gray-300 rounded-lg shadow-inner" id="table-container-div">
-            <table class="w-full text-sm text-left whitespace-nowrap" id="dataTable">
+            <table class="w-full text-sm text-left" id="dataTable">
                 <thead>
                     <tr>
-                        <th class="px-4 py-3 col-date text-center">日期</th>
-                        <th class="px-3 py-3 border-x border-blue-200 text-center">鍋1</th>
-                        <th class="px-3 py-3 border-x border-blue-200 text-center">鍋2</th>
-                        <th class="px-3 py-3 border-x border-blue-200 text-center">瓦1</th>
-                        <th class="px-3 py-3 border-x border-blue-200 text-center">瓦2</th>
-                        <th class="px-3 py-3 border-x border-blue-200 text-center">小水</th>
-                        <th class="px-3 py-3 border-x border-blue-200 text-center">大水</th>
-                        <th class="px-3 py-3 border-x border-blue-200 text-center">錳砂</th>
-                        <th class="px-3 py-3 border-x border-blue-200 text-center">TB-60K</th>
-                        <th class="px-3 py-3 border-x border-blue-200 text-center">TB-80K</th>
-                        <th class="px-3 py-3 border-x border-blue-200 text-center">TF-30K</th>
-                        <th class="px-3 py-3 border-x border-blue-200 text-center">撐開</th>
-                        <th class="px-3 py-3 border-x border-blue-200 text-center">ICC 枕套</th>
-                        <th class="px-3 py-3 border-x border-blue-200 text-center">ICC 平面</th>
-                        <th class="px-3 py-3 border-x border-blue-200 text-center">大白</th>
-                        <th class="px-3 py-3 border-x border-blue-200 text-center">小白</th>
+                        <th class="col-date">日期</th>
+                        <th class="border-x border-blue-200">鍋1</th>
+                        <th class="border-x border-blue-200">鍋2</th>
+                        <th class="border-x border-blue-200">瓦1</th>
+                        <th class="border-x border-blue-200">瓦2</th>
+                        <th class="border-x border-blue-200">小水</th>
+                        <th class="border-x border-blue-200">大水</th>
+                        <th class="border-x border-blue-200">錳砂</th>
+                        <th class="border-x border-blue-200">TB-60K</th>
+                        <th class="border-x border-blue-200">TB-80K</th>
+                        <th class="border-x border-blue-200">TF-30K</th>
+                        <th class="border-x border-blue-200">撐開</th>
+                        <th class="border-x border-blue-200">ICC 枕套</th>
+                        <th class="border-x border-blue-200">ICC 平面</th>
+                        <th class="border-x border-blue-200">大白</th>
+                        <th class="border-x border-blue-200">小白</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody" class="bg-white">
@@ -183,7 +187,7 @@
                 <h2 class="text-xl font-bold text-gray-800">📸 報表截圖預覽</h2>
                 <button onclick="closeScreenshotModal()" class="text-gray-500 hover:text-red-500 font-bold text-xl">&times;</button>
             </div>
-            <p class="text-sm text-gray-500 mb-4">您可以長按(或右鍵)下方圖片並選擇「複製圖片」，然後直接貼到 LINE 群組回報給老闆。</p>
+            <p class="text-sm text-gray-500 mb-4">您可以長按(或右鍵)下方圖片並選擇「儲存圖片」或「複製圖片」，然後直接貼到 LINE 群組回報給老闆。</p>
             <div class="flex-grow overflow-auto border rounded bg-gray-100 flex justify-center items-start p-2">
                 <img id="screenshotPreview" src="" alt="報表截圖" class="max-w-full h-auto shadow-md">
             </div>
@@ -215,7 +219,7 @@
                 <h2 class="text-xl font-bold text-gray-800">🖨️ 列印設備標籤 (QR Code)</h2>
                 <button onclick="closeQRGenerator()" class="text-gray-500 hover:text-red-500 font-bold text-xl">&times;</button>
             </div>
-            <p class="text-sm text-gray-600 mb-4">您可以將這些 QR Code 印出來並貼在對應的設備上，以後員工只要掃碼就能直接針對該項目拍照填寫。</p>
+            <p class="text-sm text-gray-600 mb-4">您可以將這些 QR Code 印出來並貼在對應的設備上。員工只要用手機原生相機掃描，就能直接開啟網頁並針對該項目拍照填寫。</p>
             <div id="qrCodesContainer" class="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <!-- Javascript 生成 QR Code 圖片 -->
             </div>
@@ -255,16 +259,14 @@
         ];
 
         let html5QrcodeScanner = null;
-        let currentTargetColId = null; // 記錄掃描到的 QR Code 對應的欄位 ID
+        let currentTargetColId = null; 
 
-        // 系統初始化
         window.onload = () => {
             initTable();
-            initDateSelector();
             loadData();
             generateQRCodesForPrint();
             
-            // 新增：偵測是否從手機原生相機掃描 QR Code 連進來
+            // 偵測是否從手機原生相機掃描 QR Code 連進來 (?qr=xxx)
             const urlParams = new URLSearchParams(window.location.search);
             const qrParam = urlParams.get('qr');
             if (qrParam) {
@@ -272,18 +274,6 @@
                 setTimeout(() => handleQRScanned(qrParam), 600);
             }
         };
-
-        function initDateSelector() {
-            const selector = document.getElementById('targetDate');
-            dates.forEach((date, index) => {
-                const option = document.createElement('option');
-                option.value = index;
-                option.text = date;
-                selector.appendChild(option);
-            });
-            // 預設選擇第一天
-            selector.value = 0; 
-        }
 
         function initTable() {
             const tbody = document.getElementById('tableBody');
@@ -296,14 +286,14 @@
                 
                 const tdDate = document.createElement('td');
                 tdDate.rowSpan = 2;
-                tdDate.className = 'col-date px-4 py-2 text-center text-gray-700';
+                tdDate.className = 'col-date px-2 py-2 text-center text-gray-700';
                 tdDate.innerText = date;
                 tr1.appendChild(tdDate);
 
                 tr1.innerHTML += `<td class="px-2 py-1 border border-gray-200 text-center"><span class="text-xs text-gray-500 mr-1">開</span><input type="text" id="g1_s_${index}" data-id="g1_s_${index}"></td>`;
                 tr1.innerHTML += `<td class="px-2 py-1 border border-gray-200 text-center"><span class="text-xs text-gray-500 mr-1">開</span><input type="text" id="g2_s_${index}" data-id="g2_s_${index}"></td>`;
 
-                cols.slice(4).forEach(col => { // Skip g1/g2 start/end in loop
+                cols.slice(4).forEach(col => { 
                     const stepAttr = (col.id === 'water_s' || col.id === 'water_l' || col.id === 'meng') ? 'step="0.01"' : '';
                     tr1.innerHTML += `<td rowspan="2" class="px-2 py-1 border border-gray-200 text-center align-middle">
                         <input type="${col.type}" id="${col.id}_${index}" data-id="${col.id}_${index}" ${stepAttr}>
@@ -320,7 +310,6 @@
             });
         }
 
-        // ================= QR Code 掃描邏輯 =================
         function openQRScanner() {
             document.getElementById('qrModal').classList.add('active');
             html5QrcodeScanner = new Html5Qrcode("qr-reader");
@@ -329,13 +318,12 @@
             
             html5QrcodeScanner.start({ facingMode: "environment" }, config, 
                 (decodedText) => {
-                    // 掃描成功
                     html5QrcodeScanner.stop().then(() => {
                         document.getElementById('qrModal').classList.remove('active');
                         handleQRScanned(decodedText);
                     });
                 },
-                (errorMessage) => { /* 背景持續掃描，忽略錯誤 */ }
+                (errorMessage) => { }
             ).catch(err => {
                 alert("無法存取相機，請確認已給予權限。");
                 closeQRScanner();
@@ -350,17 +338,15 @@
         }
 
         function handleQRScanned(scannedCode) {
-            // 處理包含網址的 QR Code，把最後的代號抓出來 (例如 ?qr=wa1 -> wa1)
             let finalCode = scannedCode;
+            // 支援掃描完整網址，提取參數
             if (scannedCode.includes('?qr=')) {
                 finalCode = scannedCode.split('?qr=')[1];
             }
 
-            // 檢查掃描到的代碼是否在我們的欄位定義中
             const matchedCol = cols.find(c => c.id === finalCode);
             if (matchedCol) {
                 currentTargetColId = matchedCol.id;
-                // 自動觸發相機拍攝儀表板
                 document.getElementById('singleMeterInput').click();
                 showStatus(`已鎖定設備 [${matchedCol.label}]，請拍攝儀表板數字...`);
             } else {
@@ -368,24 +354,36 @@
             }
         }
 
-        // ================= AI 單張儀表板辨識邏輯 =================
         async function handleSingleMeterUpload(event) {
             const file = event.target.files[0];
             if (!file || !currentTargetColId) return;
 
-            // 取得選擇的日期 Index
-            const targetDateIndex = document.getElementById('targetDate').value;
-            const targetInputId = `${currentTargetColId}_${targetDateIndex}`;
-            const targetInput = document.getElementById(targetInputId);
+            let targetInput = null;
+            let targetDateIndex = -1;
+
+            // 尋找最後一個空值
+            for (let i = dates.length - 1; i >= 0; i--) {
+                const inputId = `${currentTargetColId}_${i}`;
+                const inputEl = document.getElementById(inputId);
+                if (inputEl && inputEl.value.trim() === '') {
+                    targetInput = inputEl;
+                    targetDateIndex = i;
+                    break; 
+                }
+            }
+
+            if (!targetInput) {
+                targetDateIndex = dates.length - 1;
+                targetInput = document.getElementById(`${currentTargetColId}_${targetDateIndex}`);
+            }
+
+            if (!targetInput) return;
             
             showStatus(`🤖 正在辨識儀表板數字，請稍候...`);
             
-            // 幫指定的輸入框加上高光
             document.querySelectorAll('input').forEach(i => i.classList.remove('highlight-cell'));
-            if(targetInput) {
-                targetInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                targetInput.classList.add('highlight-cell');
-            }
+            targetInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            targetInput.classList.add('highlight-cell');
 
             try {
                 const base64Data = (await convertFileToBase64(file)).split(',')[1];
@@ -402,7 +400,7 @@
                 if (resultText && resultText.trim().toLowerCase() !== 'null') {
                     if (targetInput) {
                         targetInput.value = resultText.trim();
-                        saveData(); // 填入後自動暫存
+                        saveData(); 
                         showStatus(`✅ 辨識完成！已填入數字：${resultText.trim()}`);
                         setTimeout(() => hideStatus(), 3000);
                     }
@@ -416,11 +414,10 @@
                 showStatus(`❌ 辨識發生錯誤。`);
                 setTimeout(() => hideStatus(), 3000);
             } finally {
-                event.target.value = ''; // Reset input
+                event.target.value = ''; 
             }
         }
 
-        // ================= AI 整張表單辨識邏輯 (沿用上一版) =================
         async function handleWholeImageUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -469,7 +466,6 @@
             saveData();
         }
 
-        // ================= 共用 API 呼叫 =================
         async function callGeminiAPI(prompt, base64Data, mimeType, expectJson = false) {
             const apiKey = ""; 
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
@@ -495,7 +491,6 @@
             });
         }
 
-        // ================= UI 輔助功能 =================
         function showStatus(text) {
             const el = document.getElementById('aiStatus');
             el.innerText = text;
@@ -505,22 +500,21 @@
             document.getElementById('aiStatus').classList.add('hidden');
         }
 
-        // ================= 產生 QR Code 列印用 =================
         function openQRGenerator() {
             document.getElementById('qrGenModal').classList.add('active');
         }
         function closeQRGenerator() {
             document.getElementById('qrGenModal').classList.remove('active');
         }
+        
         function generateQRCodesForPrint() {
             const container = document.getElementById('qrCodesContainer');
             container.innerHTML = '';
             
-            // 取得您目前的網址，讓 QR Code 帶有這個網頁的專屬連結
+            // 使用目前網址生成專屬 QR Code 連結
             const baseUrl = window.location.href.split('?')[0];
 
             cols.forEach(col => {
-                // 將網址與欄位代號結合，變成例如： https://bai-qi.../?qr=wa1
                 const qrData = encodeURIComponent(`${baseUrl}?qr=${col.id}`);
                 const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${qrData}`;
                 container.innerHTML += `
@@ -533,7 +527,6 @@
             });
         }
 
-        // ================= 儲存與匯出 =================
         function saveData() {
             const inputs = document.querySelectorAll('#dataTable input');
             const data = {};
@@ -577,9 +570,7 @@
             link.click();
         }
 
-        // ================= 截圖功能 =================
         function takeScreenshot() {
-            // 需要先載入 html2canvas 套件 (已在 head 區塊加入)
             if (typeof html2canvas === 'undefined') {
                 const script = document.createElement('script');
                 script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
@@ -596,32 +587,25 @@
             btn.innerHTML = '⏳ 處理中...';
             
             const tableContainer = document.getElementById('table-container-div');
-            // 記住原本的捲動狀態
             const originalMaxHeight = tableContainer.style.maxHeight;
             const originalOverflowY = tableContainer.style.overflowY;
             
-            // 為了截到「整個月份」的資料，我們暫時把表格展開到最大，取消捲軸
             tableContainer.style.maxHeight = 'none';
             tableContainer.style.overflowY = 'visible';
             
-            // 顯示上方標題，隱藏不需要截圖的操作按鈕 (利用 data-html2canvas-ignore 屬性)
             document.getElementById('print-title').classList.remove('hidden');
             
-            // 美化截圖：把輸入框的邊框拿掉，看起來像一張真正的報表
             const inputs = document.querySelectorAll('#dataTable input');
             inputs.forEach(input => {
                 input.style.border = 'none';
                 input.style.backgroundColor = 'transparent';
             });
 
-            // 等待一點時間讓瀏覽器套用上述的 CSS 變更
             setTimeout(() => {
-                // 將包裹表格的區塊截圖
                 html2canvas(document.querySelector('.max-w-\\[1600px\\]'), {
-                    scale: 2, // 提高畫質，老闆放大看才不會模糊
+                    scale: 2, 
                     backgroundColor: '#ffffff'
                 }).then(canvas => {
-                    // 截圖完成，把所有樣式恢復原狀
                     tableContainer.style.maxHeight = originalMaxHeight;
                     tableContainer.style.overflowY = originalOverflowY;
                     document.getElementById('print-title').classList.add('hidden');
@@ -630,10 +614,8 @@
                         input.style.backgroundColor = '';
                     });
                     
-                    // 轉成圖片 URL
                     const image = canvas.toDataURL("image/png");
                     
-                    // 顯示在彈出視窗中
                     document.getElementById('screenshotPreview').src = image;
                     document.getElementById('downloadScreenshotBtn').href = image;
                     document.getElementById('screenshotModal').classList.add('active');
