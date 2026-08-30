@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智慧收尾用量系統</title>
+    <title>智慧收尾用量系統 (115年8月份)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <style>
@@ -66,7 +65,7 @@
             border-top: none;
         }
 
-        /* 絕對精準對齊的表格設定 */
+        /* 絕對精準對齊的單品項表格設定 */
         table.fixed-table {
             width: 100%;
             border-collapse: collapse;
@@ -159,9 +158,6 @@
             box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
             background-color: #eff6ff;
         }
-
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 50; justify-content: center; align-items: center; padding: 16px; backdrop-filter: blur(4px); }
-        .modal.active { display: flex; }
     </style>
 </head>
 <body class="text-gray-800">
@@ -196,85 +192,6 @@
 
     </div>
 
-    <!-- 現場工作人員專用：極簡掃碼拍照填報畫面 (當掃描特定設備 QR Code 時自動顯示) -->
-    <div id="fieldWorkerModal" class="modal">
-        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md mx-4 text-center">
-            <div class="bg-indigo-600 p-4 rounded-xl text-white mb-4">
-                <h2 class="text-xl font-bold" id="field-device-title">蒸氣高燃鍋爐</h2>
-                <p class="text-sm text-indigo-200 mt-1">現場數據快速填報系統</p>
-            </div>
-            
-            <div class="mb-4 text-left">
-                <label class="block text-sm font-bold text-gray-700 mb-1">📅 選擇填報日期：</label>
-                <select id="fieldTargetDate" class="w-full p-2.5 rounded-lg border border-gray-300 font-semibold bg-gray-50">
-                    <!-- JS 動態生成 -->
-                </select>
-            </div>
-
-            <div class="border-2 border-dashed border-indigo-300 bg-indigo-50/50 p-6 rounded-xl mb-6">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-indigo-500 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <p class="text-sm font-bold text-gray-700 mb-1">點擊下方按鈕拍攝機台儀表板</p>
-                <p class="text-xs text-gray-500">AI 將會自動識別數值</p>
-            </div>
-
-            <button onclick="triggerFieldCamera()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-lg shadow-lg mb-3">
-                📷 立即拍照辨識
-            </button>
-            <button onclick="closeFieldWorkerModal()" class="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-sm">
-                返回主頁
-            </button>
-        </div>
-    </div>
-
-    <!-- AI 辨識結果確認 Modal -->
-    <div id="confirmModal" class="modal">
-        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm mx-4">
-            <div class="text-center mb-6">
-                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-3">
-                    <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                </div>
-                <h3 class="text-lg leading-6 font-bold text-gray-900">AI 辨識完成</h3>
-                <p class="text-sm text-gray-500 mt-2">請確認以下數值，若有誤可直接修改。</p>
-            </div>
-            
-            <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6">
-                <p class="text-xs text-gray-500 font-bold mb-1 uppercase">設備項目</p>
-                <p class="text-base font-bold text-blue-700 mb-4" id="confirm-device-name">蒸氣高燃鍋爐</p>
-                
-                <p class="text-xs text-gray-500 font-bold mb-1 uppercase">辨識結果 (可手動修改)</p>
-                <input type="text" id="confirm-value-input" class="w-full text-center text-2xl font-black text-gray-800 p-3 border-2 border-blue-300 rounded-lg focus:border-blue-600 focus:outline-none">
-            </div>
-
-            <div class="flex gap-3">
-                <button onclick="closeConfirmModal()" class="w-1/2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold border border-gray-300">
-                    取消重拍
-                </button>
-                <button onclick="submitConfirmedData()" class="w-1/2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md">
-                    確認寫入
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- QR 掃描器 Modal (總表專用) -->
-    <div id="qrModal" class="modal">
-        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm mx-4">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold text-gray-800">📷 掃描機台 QR 碼</h2>
-                <button onclick="closeQRScanner()" class="text-gray-400 hover:text-red-500 font-bold text-2xl">&times;</button>
-            </div>
-            <div id="qr-reader" class="w-full bg-black rounded-xl overflow-hidden shadow-inner"></div>
-        </div>
-    </div>
-
-    <!-- 隱藏的拍照按鈕 -->
-    <input type="file" id="singleMeterInput" accept="image/*" capture="environment" class="hidden" onchange="handleSingleMeterUpload(event)">
-
     <script>
         // 完整的 8/1 - 8/31 日期定義
         const dates = [];
@@ -300,26 +217,9 @@
             { id: 'meng', label: '猛砂', hasOpenClose: false }
         ];
 
-        let html5QrcodeScanner = null;
-        let pendingScanItem = null;
-        let activeTabId = 'tab-master';
-
         window.onload = () => {
             buildTabsAndViews();
             loadData();
-            
-            // 檢查網址是否有帶入 ?qr=xxx (現場掃描直接進入專屬拍照填報畫面)
-            const urlParams = new URLSearchParams(window.location.search);
-            const qrParam = urlParams.get('qr');
-            if (qrParam) {
-                const targetItem = items.find(i => i.id === qrParam);
-                if (targetItem) {
-                    // 隱藏後台導覽，開啟現場專屬填報 Modal
-                    document.getElementById('topNav').style.display = 'none';
-                    document.getElementById('mainContainer').style.padding = '10px';
-                    openFieldWorkerModal(targetItem);
-                }
-            }
         };
 
         // 動態生成 11 個分頁與畫面的核心函式
@@ -342,12 +242,6 @@
                     <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
                         <h2 class="text-xl font-bold text-gray-700">📅 115年8月份設備用量總結算表 (8/1 - 8/31)</h2>
                         <div class="flex flex-wrap gap-2">
-                            <button onclick="openQRScanner()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow text-sm font-medium transition-colors flex items-center gap-1">
-                                📱 現場掃碼填寫
-                            </button>
-                            <button onclick="switchTab('tab-qr')" class="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg shadow text-sm font-medium transition-colors flex items-center gap-1">
-                                🖨️ QR碼管理
-                            </button>
                             <button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium transition-colors flex items-center gap-1">
                                 📸 截圖 LINE 傳老闆
                             </button>
@@ -360,7 +254,7 @@
                         </div>
                     </div>
 
-                    <div class="table-container">
+                    <div class="table-container" id="masterTableContainer">
                         <table class="master-table" id="masterTable">
                             <thead>
                                 <tr>
@@ -390,9 +284,6 @@
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-xl font-bold text-blue-800">📌 ${item.label} - 8月份每日度數紀錄表 (8/1 - 8/31)</h2>
                             <div class="flex gap-2">
-                                <button onclick="openScannerForItem('${item.id}')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">
-                                    📷 拍照辨識填寫
-                                </button>
                                 <button onclick="saveData()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium">
                                     💾 暫存資料
                                 </button>
@@ -414,7 +305,7 @@
                                                 <tr>
                                                     <td class="font-semibold bg-gray-50">${dateStr}</td>
                                                     <td><input type="text" class="cell-input" id="${item.id}_s_${dIdx}" data-id="${item.id}_s_${dIdx}" oninput="calcMasterTable()" placeholder="例: 11801:59"></td>
-                                                    <td><input type="text" class="cell-input" id="${item.id}_e_${dIdx}" data-id="${item.id}_e_${dIdx}" oninput="handleCloseInput('${item.id}', ${dIdx})"></td>
+                                                    <td><input type="text" class="cell-input" id="${item.id}_e_${dIdx}" data-id="${item.id}_e_${dIdx}" oninput="handleCloseInput('${item.id}', ${dIdx})" placeholder="例: 11806:55"></td>
                                                 </tr>
                                             `;
                                         } else {
@@ -433,27 +324,6 @@
                 `;
             });
 
-            // 3. 建立 QR 碼管理分頁
-            tabsContainer.innerHTML += `
-                <button onclick="switchTab('tab-qr')" id="btn-tab-qr" class="nav-tab">
-                    🖨️ QR碼管理
-                </button>
-            `;
-
-            contentContainer.innerHTML += `
-                <div id="tab-qr" class="tab-content bg-white p-6 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0">
-                    <div class="flex justify-between items-center mb-6 border-b pb-4">
-                        <div>
-                            <h2 class="text-xl font-bold text-gray-800">🖨️ 現場機台 QR 碼標籤</h2>
-                            <p class="text-sm text-gray-500 mt-1">您可以將這些 QR 碼印出並貼在對應設備旁，人員可直接手機掃描拍照填寫。</p>
-                        </div>
-                        <button onclick="window.print()" class="px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg shadow font-medium">列印本頁</button>
-                    </div>
-                    <div id="qrCodesContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
-                </div>
-            `;
-
-            generateQRCodes();
             calcMasterTable();
         }
 
@@ -467,32 +337,6 @@
             if (tabId === 'tab-master') {
                 calcMasterTable();
             }
-        }
-
-        // ================= 現場員工專屬 QR 掃描與填報流程 =================
-        function openFieldWorkerModal(item) {
-            pendingScanItem = item;
-            document.getElementById('field-device-title').innerText = item.label;
-            
-            // 產生日期下拉選單
-            const selectEl = document.getElementById('fieldTargetDate');
-            selectEl.innerHTML = '';
-            dates.forEach((dStr, idx) => {
-                selectEl.innerHTML += `<option value="${idx}">${dStr}</option>`;
-            });
-            // 預設選今天 (或倒數第二天)
-            selectEl.value = dates.length > 2 ? dates.length - 2 : 0;
-
-            document.getElementById('fieldWorkerModal').classList.add('active');
-        }
-
-        function closeFieldWorkerModal() {
-            document.getElementById('fieldWorkerModal').classList.remove('active');
-            window.location.href = window.location.href.split('?')[0]; // 清除網址參數返回主頁
-        }
-
-        function triggerFieldCamera() {
-            document.getElementById('singleMeterInput').click();
         }
 
         // ================= 自動連動開收邏輯 (收的數值自動帶入隔天開) =================
@@ -564,117 +408,21 @@
             return parseFloat(str);
         }
 
-        // ================= QR 掃描與 AI 辨識 =================
-        function openQRScanner() {
-            document.getElementById('qrModal').classList.add('active');
-            html5QrcodeScanner = new Html5Qrcode("qr-reader");
-            html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, 
-                (decodedText) => {
-                    html5QrcodeScanner.stop().then(() => {
-                        document.getElementById('qrModal').classList.remove('active');
-                        processScannedCode(decodedText);
-                    });
-                }, (err) => {}
-            ).catch(err => { alert("無法存取相機"); closeQRScanner(); });
-        }
-
-        function openScannerForItem(itemId) {
-            pendingScanItem = items.find(i => i.id === itemId);
-            // 預設抓選最後一筆未填寫的日期
-            document.getElementById('singleMeterInput').click();
-        }
-
-        function closeQRScanner() {
-            document.getElementById('qrModal').classList.remove('active');
-            if(html5QrcodeScanner) html5QrcodeScanner.stop().catch(e=>{});
-        }
-
-        function processScannedCode(code) {
-            let finalCode = code.includes('?qr=') ? code.split('?qr=')[1] : code;
-            pendingScanItem = items.find(i => i.id === finalCode);
-            if (pendingScanItem) {
-                document.getElementById('singleMeterInput').click();
-            } else {
-                alert("無效的設備條碼：" + code);
-            }
-        }
-
-        async function handleSingleMeterUpload(event) {
-            const file = event.target.files[0];
-            if (!file || !pendingScanItem) return;
-
-            let targetDateIdx = document.getElementById('fieldTargetDate') ? 
-                parseInt(document.getElementById('fieldTargetDate').value) : (dates.length - 2);
-
-            try {
-                const base64Data = (await convertFileToBase64(file)).split(',')[1];
-                const prompt = `這是一張工廠儀表板或手寫數字照片。請判讀數值。
-                規則：
-                1. 請完整回傳讀數（如 11860:46），保留冒號。
-                2. 無法辨識回傳 null。`;
-
-                const resultText = await callGeminiAPI(prompt, base64Data, file.type);
-                const aiVal = resultText.trim().replace(/^null$/i, '');
-
-                showConfirmModal(pendingScanItem, targetDateIdx, aiVal);
-            } catch (error) {
-                alert("辨識失敗，請重試");
-            } finally {
-                event.target.value = '';
-            }
-        }
-
-        let currentModalData = null;
-        function showConfirmModal(item, dateIdx, val) {
-            currentModalData = { item, dateIdx };
-            document.getElementById('confirm-device-name').innerText = `${item.label} (${dates[dateIdx]})`;
-            document.getElementById('confirm-value-input').value = val;
-            document.getElementById('confirmModal').classList.add('active');
-        }
-
-        function closeConfirmModal() {
-            document.getElementById('confirmModal').classList.remove('active');
-            currentModalData = null;
-        }
-
-        // ================= 寫入與開收自動連動核心邏輯 =================
-        function submitConfirmedData() {
-            if (!currentModalData) return;
-            const finalVal = document.getElementById('confirm-value-input').value.trim();
-            const { item, dateIdx } = currentModalData;
-
-            if (item.hasOpenClose) {
-                // 1. 寫入當天的「收」
-                const closeInput = document.getElementById(`${item.id}_e_${dateIdx}`);
-                if (closeInput) closeInput.value = finalVal;
-                
-                // 2. 自動帶入隔天的「開」
-                if (dateIdx + 1 < dates.length) {
-                    const nextOpenInput = document.getElementById(`${item.id}_s_${dateIdx + 1}`);
-                    if (nextOpenInput) nextOpenInput.value = finalVal;
-                }
-            } else {
-                const input = document.getElementById(`${item.id}_${dateIdx}`);
-                if (input) input.value = finalVal;
-            }
-
-            saveData();
-            calcMasterTable();
-            closeConfirmModal();
-
-            if (window.location.search.includes('qr=')) {
-                alert("✅ 資料已成功上傳寫入！");
-                closeFieldWorkerModal();
-            } else {
-                switchTab(`tab-${item.id}`);
-            }
-        }
-
         // ================= 截圖與匯出 =================
         function takeScreenshot() {
             switchTab('tab-master');
+            const container = document.getElementById('masterTableContainer');
+            const originalMaxHeight = container.style.maxHeight;
+            const originalOverflow = container.style.overflow;
+            
+            container.style.maxHeight = 'none';
+            container.style.overflow = 'visible';
+
             setTimeout(() => {
                 html2canvas(document.querySelector('#tab-master'), { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
+                    container.style.maxHeight = originalMaxHeight;
+                    container.style.overflow = originalOverflow;
+
                     const link = document.createElement('a');
                     link.download = '115年8月用量總表_完整月報.png';
                     link.href = canvas.toDataURL('image/png');
@@ -685,7 +433,12 @@
 
         function exportMasterCSV() {
             let csv = "\uFEFF日期," + items.map(i => `${i.label}用量`).join(",") + "\r\n";
-            // 這裡可依需求擴充完整匯出
+            dates.forEach((dateStr, dIdx) => {
+                let row = [dateStr];
+                items.forEach(item => {
+                    row.push('');
+                });
+            });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
@@ -726,43 +479,6 @@
                 }
                 saveData();
             }
-        }
-
-        function generateQRCodes() {
-            const container = document.getElementById('qrCodesContainer');
-            container.innerHTML = '';
-            const baseUrl = window.location.href.split('?')[0];
-
-            items.forEach(item => {
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(baseUrl + '?qr=' + item.id)}`;
-                container.innerHTML += `
-                    <div class="flex flex-col items-center justify-center p-3 border rounded-xl bg-gray-50 shadow-sm">
-                        <img src="${qrUrl}" alt="${item.label}" class="w-24 h-24 mb-2 bg-white p-1 rounded border">
-                        <span class="font-bold text-gray-800 text-sm">${item.label}</span>
-                    </div>
-                `;
-            });
-        }
-
-        async function callGeminiAPI(prompt, base64Data, mimeType) {
-            const apiKey = "";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-            const res = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }, { inlineData: { mimeType, data: base64Data } }] }] })
-            });
-            const json = await res.json();
-            return json.candidates[0].content.parts[0].text;
-        }
-
-        function convertFileToBase64(file) {
-            return new Promise((res, rej) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => res(reader.result);
-                reader.onerror = rej;
-            });
         }
     </script>
 </body>
