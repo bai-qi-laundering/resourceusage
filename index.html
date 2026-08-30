@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>收尾用量整合表</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 QR Code 掃描套件 -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, 'Microsoft JhengHei';
+            background-color: #f3f4f6;
+        }
+        
+        .table-container {
+            max-height: calc(100vh - 280px);
+            overflow-y: auto;
+            overflow-x: auto;
+        }
+
+        th {
+            position: sticky;
+            top: 0;
+            background-color: #1f2937;
+            color: white;
+            z-index: 10;
+            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4);
+            white-space: nowrap; 
+            min-height: 40px;
+        }
+        
+        .col-date {
+            position: sticky;
+            left: 0;
+            background-color: #f3f4f6;
+            z-index: 5;
+            font-weight: 600;
+            border-right: 2px solid #d1d5db;
+        }
+
+        th.col-date {
+            z-index: 15;
+            background-color: #111827;
+        }
+
+        input {
+            width: 70px;
+            padding: 4px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+            background-color: #eff6ff;
+        }
+        
+        .highlight-cell {
+            border-color: #8b5cf6 !important;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.5) !important;
+            background-color: #ede9fe !important;
+        }
+
+        tr.day-start { border-top: 2px solid #9ca3af; }
+        .row-group:hover td { background-color: #e5e7eb; }
+        .row-group:hover .col-date { background-color: #d1d5db; }
+        
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; margin: 0; 
+        }
+
+        /* Modal Styles */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 50; justify-content: center; align-items: center; }
+        .modal.active { display: flex; }
+    </style>
+</head>
+<body class="p-4 md:p-6 text-gray-800">
+
+    <div class="max-w-[1600px] mx-auto bg-white rounded-xl shadow-lg p-4 md:p-6">
+        
+        <!-- 頭部區塊 -->
+        <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+            <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                115年8月份收尾用量整合表
+            </h1>
+            
+            <div class="flex flex-wrap gap-2 justify-end">
+                <button onclick="saveData()" id="saveBtn" class="flex items-center gap-1 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded shadow text-sm font-medium transition-colors">
+                    💾 暫存資料
+                </button>
+                <button onclick="exportCSV()" class="flex items-center gap-1 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded shadow text-sm font-medium transition-colors">
+                    📊 匯出 Excel
+                </button>
+                <button onclick="window.print()" class="flex items-center gap-1 px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded shadow text-sm font-medium transition-colors">
+                    🖨️ 列印報表
+                </button>
+            </div>
+        </div>
+
+        <!-- 智慧操作區 -->
+        <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-4 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <label class="font-bold text-indigo-800 whitespace-nowrap">📍 選擇輸入日期：</label>
+                <select id="targetDate" class="p-2 rounded border border-indigo-300 bg-white font-medium text-gray-700 outline-none focus:border-indigo-500">
+                    <!-- Javascript 自動生成日期選項 -->
+                </select>
+            </div>
+            
+            <div class="flex flex-wrap gap-3 w-full md:w-auto justify-end">
+                <button onclick="openQRScanner()" class="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-md transition-colors font-bold transform hover:scale-105">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 1v1h1V5H5zm0 7a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 1v1h1v-1H5zm6-7a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1V4zm2 1v1h1V5h-1zm-3 7a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1v-3a1 1 0 00-1-1h-3zM14 13v1h1v-1h-1z" clip-rule="evenodd" />
+                    </svg>
+                    掃 QR Code 拍儀表
+                </button>
+                
+                <label for="cameraInputWhole" class="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg shadow transition-colors font-medium cursor-pointer">
+                    📸 辨識整張手寫單
+                    <input type="file" id="cameraInputWhole" accept="image/*" class="hidden" onchange="handleWholeImageUpload(event)">
+                </label>
+
+                <button onclick="openQRGenerator()" class="flex items-center gap-1 px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 border border-gray-400 rounded shadow-sm text-sm font-medium">
+                    🖨️ 產生設備 QR 碼
+                </button>
+            </div>
+        </div>
+
+        <div id="aiStatus" class="text-purple-700 font-bold hidden mb-4 bg-purple-100 p-3 rounded-lg text-center animate-pulse border border-purple-300">
+            🤖 AI 處理中，請稍候...
+        </div>
+
+        <!-- 隱藏的單一圖片上傳按鈕 (由 QR 成功後觸發) -->
+        <input type="file" id="singleMeterInput" accept="image/*" capture="environment" class="hidden" onchange="handleSingleMeterUpload(event)">
+
+        <!-- 表格區塊 -->
+        <div class="table-container border border-gray-300 rounded-lg shadow-inner">
+            <table class="w-full text-sm text-left whitespace-nowrap" id="dataTable">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-3 col-date text-center">日期</th>
+                        <th class="px-3 py-3 border-x border-gray-600 text-center">鍋1</th>
+                        <th class="px-3 py-3 border-x border-gray-600 text-center">鍋2</th>
+                        <th class="px-3 py-3 border-x border-gray-600 text-center">瓦1</th>
+                        <th class="px-3 py-3 border-x border-gray-600 text-center">瓦2</th>
+                        <th class="px-3 py-3 border-x border-gray-600 text-center">小水</th>
+                        <th class="px-3 py-3 border-x border-gray-600 text-center">大水</th>
+                        <th class="px-3 py-3 border-x border-gray-600 text-center">錳砂</th>
+                        <th class="px-3 py-3 border-x border-gray-600 text-center">TB-60K</th>
+                        <th class="px-3 py-3 border-x border-gray-600 text-center">TB-80K</th>
+                        <th class="px-3 py-3 border-x border-gray-600 text-center">TF-30K</th>
+                        <th class="px-3 py-3 border-x border-gray-600 text-center">撐開</th>
+                        <th class="px-3 py-3 border-x border-gray-600 text-center">ICC 枕套</th>
+                        <th class="px-3 py-3 border-x border-gray-600 text-center">ICC 平面</th>
+                        <th class="px-3 py-3 border-x border-gray-600 text-center">大白</th>
+                        <th class="px-3 py-3 border-x border-gray-600 text-center">小白</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody" class="bg-white">
+                    <!-- Javascript 生成內容 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- QR Code 掃描器 Modal -->
+    <div id="qrModal" class="modal">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-gray-800">📷 掃描設備 QR Code</h2>
+                <button onclick="closeQRScanner()" class="text-gray-500 hover:text-red-500 font-bold text-xl">&times;</button>
+            </div>
+            <div id="qr-reader" class="w-full bg-black rounded overflow-hidden"></div>
+            <p class="text-sm text-gray-500 mt-4 text-center">請將相機對準設備上的 QR Code。<br>掃描成功後會自動開啟相機拍攝數字。</p>
+        </div>
+    </div>
+
+    <!-- 產生 QR Code Modal -->
+    <div id="qrGenModal" class="modal">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-gray-800">🖨️ 列印設備標籤 (QR Code)</h2>
+                <button onclick="closeQRGenerator()" class="text-gray-500 hover:text-red-500 font-bold text-xl">&times;</button>
+            </div>
+            <p class="text-sm text-gray-600 mb-4">您可以將這些 QR Code 印出來並貼在對應的設備上，以後員工只要掃碼就能直接針對該項目拍照填寫。</p>
+            <div id="qrCodesContainer" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <!-- Javascript 生成 QR Code 圖片 -->
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button onclick="window.print()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">列印本頁</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dates = [
+            '08/17 (週一)', '08/18 (週二)', '08/19 (週三)', '08/20 (週四)',
+            '08/21 (週五)', '08/22 (週六)', '08/23 (週日)', '08/24 (週一)',
+            '08/25 (週二)', '08/26 (週三)', '08/27 (週四)', '08/28 (週五)',
+            '08/29 (週六)', '08/30 (週日)', '08/31 (週一)'
+        ];
+
+        // 欄位定義 (代號對應中文字，用於 QR Code 與 UI)
+        const cols = [
+            { id: 'g1_s', label: '鍋1 (開)', type: 'text' },
+            { id: 'g1_e', label: '鍋1 (收)', type: 'text' },
+            { id: 'g2_s', label: '鍋2 (開)', type: 'text' },
+            { id: 'g2_e', label: '鍋2 (收)', type: 'text' },
+            { id: 'wa1', label: '瓦1', type: 'number' },
+            { id: 'wa2', label: '瓦2', type: 'number' },
+            { id: 'water_s', label: '小水', type: 'number' },
+            { id: 'water_l', label: '大水', type: 'number' },
+            { id: 'meng', label: '錳砂', type: 'number' },
+            { id: 'tb60', label: 'TB-60K', type: 'number' },
+            { id: 'tb80', label: 'TB-80K', type: 'number' },
+            { id: 'tf30', label: 'TF-30K', type: 'number' },
+            { id: 'spread', label: '撐開', type: 'number' },
+            { id: 'icc_p', label: 'ICC 枕套', type: 'number' },
+            { id: 'icc_f', label: 'ICC 平面', type: 'number' },
+            { id: 'white_l', label: '大白', type: 'number' },
+            { id: 'white_s', label: '小白', type: 'number' }
+        ];
+
+        let html5QrcodeScanner = null;
+        let currentTargetColId = null; // 記錄掃描到的 QR Code 對應的欄位 ID
+
+        // 系統初始化
+        window.onload = () => {
+            initTable();
+            initDateSelector();
+            loadData();
+            generateQRCodesForPrint();
+        };
+
+        function initDateSelector() {
+            const selector = document.getElementById('targetDate');
+            dates.forEach((date, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.text = date;
+                selector.appendChild(option);
+            });
+            // 預設選擇第一天
+            selector.value = 0; 
+        }
+
+        function initTable() {
+            const tbody = document.getElementById('tableBody');
+            dates.forEach((date, index) => {
+                const tbodyGroup = document.createElement('tbody');
+                tbodyGroup.className = 'row-group';
+
+                const tr1 = document.createElement('tr');
+                tr1.className = 'day-start';
+                
+                const tdDate = document.createElement('td');
+                tdDate.rowSpan = 2;
+                tdDate.className = 'col-date px-4 py-2 text-center text-gray-700';
+                tdDate.innerText = date;
+                tr1.appendChild(tdDate);
+
+                tr1.innerHTML += `<td class="px-2 py-1 border border-gray-200 text-center"><span class="text-xs text-gray-500 mr-1">開</span><input type="text" id="g1_s_${index}" data-id="g1_s_${index}"></td>`;
+                tr1.innerHTML += `<td class="px-2 py-1 border border-gray-200 text-center"><span class="text-xs text-gray-500 mr-1">開</span><input type="text" id="g2_s_${index}" data-id="g2_s_${index}"></td>`;
+
+                cols.slice(4).forEach(col => { // Skip g1/g2 start/end in loop
+                    const stepAttr = (col.id === 'water_s' || col.id === 'water_l' || col.id === 'meng') ? 'step="0.01"' : '';
+                    tr1.innerHTML += `<td rowspan="2" class="px-2 py-1 border border-gray-200 text-center align-middle">
+                        <input type="${col.type}" id="${col.id}_${index}" data-id="${col.id}_${index}" ${stepAttr}>
+                    </td>`;
+                });
+
+                const tr2 = document.createElement('tr');
+                tr2.innerHTML += `<td class="px-2 py-1 border border-gray-200 text-center"><span class="text-xs text-gray-500 mr-1">收</span><input type="text" id="g1_e_${index}" data-id="g1_e_${index}"></td>`;
+                tr2.innerHTML += `<td class="px-2 py-1 border border-gray-200 text-center"><span class="text-xs text-gray-500 mr-1">收</span><input type="text" id="g2_e_${index}" data-id="g2_e_${index}"></td>`;
+
+                tbodyGroup.appendChild(tr1);
+                tbodyGroup.appendChild(tr2);
+                tbody.appendChild(tbodyGroup);
+            });
+        }
+
+        // ================= QR Code 掃描邏輯 =================
+        function openQRScanner() {
+            document.getElementById('qrModal').classList.add('active');
+            html5QrcodeScanner = new Html5Qrcode("qr-reader");
+            
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            
+            html5QrcodeScanner.start({ facingMode: "environment" }, config, 
+                (decodedText) => {
+                    // 掃描成功
+                    html5QrcodeScanner.stop().then(() => {
+                        document.getElementById('qrModal').classList.remove('active');
+                        handleQRScanned(decodedText);
+                    });
+                },
+                (errorMessage) => { /* 背景持續掃描，忽略錯誤 */ }
+            ).catch(err => {
+                alert("無法存取相機，請確認已給予權限。");
+                closeQRScanner();
+            });
+        }
+
+        function closeQRScanner() {
+            document.getElementById('qrModal').classList.remove('active');
+            if(html5QrcodeScanner) {
+                html5QrcodeScanner.stop().catch(err => console.log(err));
+            }
+        }
+
+        function handleQRScanned(scannedCode) {
+            // 檢查掃描到的代碼是否在我們的欄位定義中
+            const matchedCol = cols.find(c => c.id === scannedCode);
+            if (matchedCol) {
+                currentTargetColId = matchedCol.id;
+                // 自動觸發相機拍攝儀表板
+                document.getElementById('singleMeterInput').click();
+                showStatus(`已鎖定設備 [${matchedCol.label}]，請拍攝儀表板數字...`);
+            } else {
+                alert("這不是有效的設備 QR Code：" + scannedCode);
+            }
+        }
+
+        // ================= AI 單張儀表板辨識邏輯 =================
+        async function handleSingleMeterUpload(event) {
+            const file = event.target.files[0];
+            if (!file || !currentTargetColId) return;
+
+            // 取得選擇的日期 Index
+            const targetDateIndex = document.getElementById('targetDate').value;
+            const targetInputId = `${currentTargetColId}_${targetDateIndex}`;
+            const targetInput = document.getElementById(targetInputId);
+            
+            showStatus(`🤖 正在辨識儀表板數字，請稍候...`);
+            
+            // 幫指定的輸入框加上高光
+            document.querySelectorAll('input').forEach(i => i.classList.remove('highlight-cell'));
+            if(targetInput) {
+                targetInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                targetInput.classList.add('highlight-cell');
+            }
+
+            try {
+                const base64Data = (await convertFileToBase64(file)).split(',')[1];
+                
+                const prompt = `這是一張儀表板或是手寫數字的照片。
+                請你判讀這張照片上的數值。
+                規則：
+                1. 請「只」回傳你判讀出來的數字或內容本身，絕對不要包含任何其他解釋文字。
+                2. 如果是手寫算式(例如 11801=59)，請直接回傳 11801=59。
+                3. 如果完全無法辨識任何數字，請回傳 null。`;
+
+                const resultText = await callGeminiAPI(prompt, base64Data, file.type);
+                
+                if (resultText && resultText.trim().toLowerCase() !== 'null') {
+                    if (targetInput) {
+                        targetInput.value = resultText.trim();
+                        saveData(); // 填入後自動暫存
+                        showStatus(`✅ 辨識完成！已填入數字：${resultText.trim()}`);
+                        setTimeout(() => hideStatus(), 3000);
+                    }
+                } else {
+                    showStatus(`❌ 無法清晰辨識出數字，請重新拍攝或手動輸入。`);
+                    setTimeout(() => hideStatus(), 3000);
+                }
+
+            } catch (error) {
+                console.error(error);
+                showStatus(`❌ 辨識發生錯誤。`);
+                setTimeout(() => hideStatus(), 3000);
+            } finally {
+                event.target.value = ''; // Reset input
+            }
+        }
+
+        // ================= AI 整張表單辨識邏輯 (沿用上一版) =================
+        async function handleWholeImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            showStatus('🤖 AI 正在讀取整張表格，這需要幾秒鐘的時間...');
+
+            try {
+                const base64Data = (await convertFileToBase64(file)).split(',')[1];
+                const prompt = `
+                這是一張手寫的「用量整合表」。請仔細辨識表格中的每一筆數據，並將其轉換為 JSON 格式。
+                如果格子是空的或是畫了斜線，請將值設為 null。如果格子裡寫著類似 "11801=59" 或是 "0"，請直接填入字串。
+                請回傳一個 JSON 陣列，屬性包含：
+                "date", "g1_s", "g1_e", "g2_s", "g2_e", "wa1", "wa2", "water_s", "water_l", "meng", "tb60", "tb80", "tf30", "spread", "icc_p", "icc_f", "white_l", "white_s"。
+                `;
+
+                const jsonText = await callGeminiAPI(prompt, base64Data, file.type, true);
+                const parsedData = JSON.parse(jsonText.replace(/```json/g, '').replace(/```/g, ''));
+                
+                fillWholeTableData(parsedData);
+                showStatus('✅ 整張表單辨識完成！');
+                setTimeout(() => hideStatus(), 4000);
+                
+            } catch (error) {
+                console.error(error);
+                showStatus('❌ 表單辨識失敗，請確認照片清晰度。');
+                setTimeout(() => hideStatus(), 4000);
+            } finally {
+                event.target.value = '';
+            }
+        }
+
+        function fillWholeTableData(parsedData) {
+            parsedData.forEach(dayData => {
+                let targetIndex = -1;
+                for (let i = 0; i < dates.length; i++) {
+                    if (dates[i].includes(dayData.date)) { targetIndex = i; break; }
+                }
+                if (targetIndex !== -1) {
+                    for (const key in dayData) {
+                        if (key === 'date') continue;
+                        const input = document.getElementById(`${key}_${targetIndex}`);
+                        if (input && dayData[key] !== null) { input.value = dayData[key]; }
+                    }
+                }
+            });
+            saveData();
+        }
+
+        // ================= 共用 API 呼叫 =================
+        async function callGeminiAPI(prompt, base64Data, mimeType, expectJson = false) {
+            const apiKey = ""; 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{ role: "user", parts: [{ text: prompt }, { inlineData: { mimeType: mimeType, data: base64Data } }] }]
+            };
+            if (expectJson) { payload.generationConfig = { responseMimeType: "application/json" }; }
+
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!response.ok) throw new Error(`API error`);
+            
+            const result = await response.json();
+            return result.candidates[0].content.parts[0].text;
+        }
+
+        function convertFileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = (error) => reject(error);
+            });
+        }
+
+        // ================= UI 輔助功能 =================
+        function showStatus(text) {
+            const el = document.getElementById('aiStatus');
+            el.innerText = text;
+            el.classList.remove('hidden');
+        }
+        function hideStatus() {
+            document.getElementById('aiStatus').classList.add('hidden');
+        }
+
+        // ================= 產生 QR Code 列印用 =================
+        function openQRGenerator() {
+            document.getElementById('qrGenModal').classList.add('active');
+        }
+        function closeQRGenerator() {
+            document.getElementById('qrGenModal').classList.remove('active');
+        }
+        function generateQRCodesForPrint() {
+            const container = document.getElementById('qrCodesContainer');
+            container.innerHTML = '';
+            cols.forEach(col => {
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${col.id}`;
+                container.innerHTML += `
+                    <div class="flex flex-col items-center p-3 border rounded">
+                        <img src="${qrUrl}" alt="${col.label} QR Code" class="w-24 h-24 mb-2">
+                        <span class="font-bold text-gray-700">${col.label}</span>
+                        <span class="text-xs text-gray-400 font-mono">${col.id}</span>
+                    </div>
+                `;
+            });
+        }
+
+        // ================= 儲存與匯出 =================
+        function saveData() {
+            const inputs = document.querySelectorAll('#dataTable input');
+            const data = {};
+            inputs.forEach(input => {
+                if(input.value.trim() !== '') { data[input.getAttribute('data-id')] = input.value; }
+            });
+            localStorage.setItem('factoryData_115_08_V2', JSON.stringify(data));
+            
+            const btn = document.getElementById('saveBtn');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '✔️ 已儲存';
+            setTimeout(() => { btn.innerHTML = originalHTML; }, 2000);
+        }
+
+        function loadData() {
+            const saved = localStorage.getItem('factoryData_115_08_V2');
+            if (saved) {
+                const data = JSON.parse(saved);
+                for (const key in data) {
+                    const input = document.getElementById(key);
+                    if (input) { input.value = data[key]; }
+                }
+            }
+        }
+
+        function exportCSV() {
+            let csvContent = "\uFEFF";
+            const headers = ['日期', '鍋1(開)', '鍋1(收)', '鍋2(開)', '鍋2(收)', '瓦1', '瓦2', '小水', '大水', '錳砂', 'TB-60K', 'TB-80K', 'TF-30K', '撐開', 'ICC枕套', 'ICC平面', '大白', '小白'];
+            csvContent += headers.join(",") + "\r\n";
+
+            dates.forEach((date, i) => {
+                let row = [date];
+                cols.forEach(col => { row.push(document.getElementById(`${col.id}_${i}`).value || ''); });
+                csvContent += row.join(",") + "\r\n";
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "115年8月收尾用量整合表.csv";
+            link.click();
+        }
+    </script>
+</body>
+</html>
