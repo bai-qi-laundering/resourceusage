@@ -148,7 +148,6 @@
                     <span class="font-bold text-xl text-gray-800">智慧收尾用量系統 <span class="text-sm font-normal text-gray-500 ml-2">(雲端版)</span></span>
                 </div>
                 <div>
-                    <!-- 新增手動同步按鈕 -->
                     <button onclick="fetchDataFromCloud()" class="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-lg shadow-sm text-sm font-bold flex items-center gap-1 transition-colors">
                         🔄 抓取最新資料
                     </button>
@@ -197,18 +196,11 @@
         for (let d = 1; d <= 31; d++) {
             const dayStr = d < 10 ? `0${d}` : `${d}`;
             const weekdays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
-            const dateObj = new Date(2026, 7, d); // 2026年8月
+            const dateObj = new Date(2026, 7, d);
             const wday = weekdays[dateObj.getDay()];
             dates.push(`08/${dayStr} (${wday})`);
         }
 
-        /* 
-            定義所有品項與其填寫類型:
-            - time_oc: 有開/收，且支援冒號時間格式
-            - time_3: 3個狀態(低中高)，支援冒號時間格式
-            - normal: 一般單一數值
-            - dual: 一個頁面填兩個表(A表/B表)
-        */
         const items = [
             { id: 'boiler1', label: '蒸氣高燃鍋爐', type: 'time_oc' },
             { id: 'boiler2', label: '蒸氣鍋爐2', type: 'time_3' },
@@ -218,7 +210,6 @@
             { id: 'water_s', label: '小支自來水', type: 'normal' },
             { id: 'soft_a', label: '大支軟水A', type: 'normal' },
             { id: 'soft_ab', label: '小支軟水A/B', type: 'dual' },
-            // 注意：軟水表1 與 軟水表2 已經在這裡被刪除了！
             { id: 'meng', label: '猛砂', type: 'normal' }
         ];
 
@@ -247,8 +238,6 @@
             }
         };
 
-        // --- 時間計算輔助函數 ---
-        // 將 105:30 轉換為 105*60 + 30 = 6330 分鐘，方便相減
         function timeToMins(str) {
             if (!str || str.trim() === '') return null;
             let s = str.toString().trim();
@@ -267,7 +256,6 @@
             return h * 60 + m;
         }
 
-        // 將 6330 分鐘 轉換回 105:30 顯示
         function minsToTime(mins) {
             if (mins === null || isNaN(mins)) return '-';
             let isNeg = mins < 0;
@@ -279,7 +267,6 @@
 
         async function fetchDataFromCloud() {
             if (SCRIPT_URL.includes('請將您部署後')) return;
-            
             showLoading('從雲端載入資料中...');
             try {
                 const response = await fetch(SCRIPT_URL, { method: 'GET' });
@@ -294,7 +281,6 @@
                 calcMasterTable();
                 showToast('✅ 雲端資料同步完成！', 'success');
             } catch (error) {
-                console.error("Fetch Error:", error);
                 showToast('❌ 讀取雲端資料失敗，請確認網路設定。', 'error');
             } finally {
                 hideLoading();
@@ -302,35 +288,24 @@
         }
 
         async function syncDataToCloud(showToastMsg = true) {
-            if (SCRIPT_URL.includes('請將您部署後')) {
-                showToast('無法儲存：請先設定 API 網址', 'error');
-                return;
-            }
-
+            if (SCRIPT_URL.includes('請將您部署後')) return;
             const data = {};
             document.querySelectorAll('input.cell-input').forEach(input => {
-                if (input.value.trim() !== '') {
-                    data[input.getAttribute('data-id')] = input.value;
-                }
+                if (input.value.trim() !== '') data[input.getAttribute('data-id')] = input.value;
             });
-
             if (Object.keys(data).length === 0) return;
-
             if (showToastMsg) showLoading('儲存至雲端中...');
-            
             try {
                 const response = await fetch(SCRIPT_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(data)
                 });
-                
                 const result = await response.json();
                 if (result.status === 'success' && showToastMsg) {
                     showToast('💾 資料已成功儲存至 Google 試算表！', 'success');
                 }
             } catch (error) {
-                console.error("Save Error:", error);
                 if (showToastMsg) showToast('❌ 儲存失敗，請檢查網路連線。', 'error');
             } finally {
                 if (showToastMsg) hideLoading();
@@ -346,7 +321,13 @@
             dates.forEach((dStr, idx) => {
                 selectEl.innerHTML += `<option value="${idx}">${dStr}</option>`;
             });
-            selectEl.value = dates.length > 2 ? dates.length - 2 : 0;
+
+            // 🌟 關鍵修改：預設選擇「明天」
+            const today = new Date();
+            // getDate() 會回傳 1~31。因為陣列是從 0 開始，所以 getDate() 的數字剛好就是明天的 index！
+            let tomorrowIdx = today.getDate(); 
+            if (tomorrowIdx >= dates.length) tomorrowIdx = dates.length - 1; // 避免超過 8/31
+            selectEl.value = tomorrowIdx;
 
             const container = document.getElementById('field-inputs-container');
             
@@ -400,7 +381,6 @@
                 showToast('系統尚未設定 Google API 網址，無法寫入！', 'error');
                 return;
             }
-
             const dateIdx = parseInt(document.getElementById('fieldTargetDate').value);
             const item = activeFieldItem;
             const dataToSubmit = {};
@@ -409,9 +389,7 @@
                 const val = document.getElementById('fieldVal_e').value.trim();
                 if (!val) { showToast('請輸入數值', 'error'); return; }
                 dataToSubmit[`${item.id}_e_${dateIdx}`] = val;
-                if (dateIdx + 1 < dates.length) {
-                    dataToSubmit[`${item.id}_s_${dateIdx + 1}`] = val;
-                }
+                if (dateIdx + 1 < dates.length) dataToSubmit[`${item.id}_s_${dateIdx + 1}`] = val;
             } else if (item.type === 'time_3') {
                 const l = document.getElementById('fieldVal_low').value.trim();
                 const m = document.getElementById('fieldVal_mid').value.trim();
@@ -447,8 +425,6 @@
                 const result = await response.json();
                 if (result.status === 'success') {
                     showToast(`✅ [${item.label}] 數據已成功寫入雲端總表！`, 'success');
-                    
-                    // 清空輸入框
                     if (item.type === 'time_oc') document.getElementById('fieldVal_e').value = '';
                     else if (item.type === 'time_3') {
                         document.getElementById('fieldVal_low').value = '';
@@ -457,9 +433,7 @@
                     } else if (item.type === 'dual') {
                         document.getElementById('fieldVal_a').value = '';
                         document.getElementById('fieldVal_b').value = '';
-                    } else {
-                        document.getElementById('fieldVal').value = '';
-                    }
+                    } else document.getElementById('fieldVal').value = '';
                 }
             } catch (error) {
                 showToast('❌ 傳輸失敗，請確保手機有連上網路。', 'error');
@@ -476,51 +450,34 @@
             tabsContainer.innerHTML = '';
             contentContainer.innerHTML = '';
 
-            // --- 總表的動態表頭生成 ---
             let thHtml = '<th class="col-date">日期</th>';
             items.forEach(item => {
                 thHtml += `<th class="col-std">${item.label}用量</th>`;
             });
 
-            // 總表
-            tabsContainer.innerHTML += `
-                <button onclick="switchTab('tab-master')" id="btn-tab-master" class="nav-tab active">
-                    📊 8/1-8/31 用量總表
-                </button>
-            `;
+            tabsContainer.innerHTML += `<button onclick="switchTab('tab-master')" id="btn-tab-master" class="nav-tab active">📊 8/1-8/31 用量總表</button>`;
 
             contentContainer.innerHTML += `
                 <div id="tab-master" class="tab-content active bg-white p-4 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0">
                     <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
                         <h2 class="text-xl font-bold text-gray-700">📅 115年8月份設備用量總結算表 (雲端同步版)</h2>
                         <div class="flex flex-wrap gap-2">
-                            <button onclick="syncDataToCloud()" id="saveBtn" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">
-                                ☁️ 儲存至試算表
-                            </button>
-                            <button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">
-                                📸 截圖傳送
-                            </button>
+                            <button onclick="syncDataToCloud()" id="saveBtn" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">☁️ 儲存至試算表</button>
+                            <button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">📸 截圖傳送</button>
                         </div>
                     </div>
                     <div class="table-container">
                         <table class="master-table" id="masterTable">
-                            <thead>
-                                <tr>${thHtml}</tr>
-                            </thead>
+                            <thead><tr>${thHtml}</tr></thead>
                             <tbody id="masterTableBody"></tbody>
                         </table>
                     </div>
                 </div>
             `;
 
-            // 個別品項分頁
             items.forEach(item => {
                 const tabId = `tab-${item.id}`;
-                tabsContainer.innerHTML += `
-                    <button onclick="switchTab('${tabId}')" id="btn-${tabId}" class="nav-tab">
-                        📋 ${item.label}
-                    </button>
-                `;
+                tabsContainer.innerHTML += `<button onclick="switchTab('${tabId}')" id="btn-${tabId}" class="nav-tab">📋 ${item.label}</button>`;
 
                 let tableHead = '';
                 let tableBody = '';
@@ -545,12 +502,15 @@
                         </tr>
                     `).join('');
                 } else if (item.type === 'dual') {
-                    tableHead = `<tr><th style="width: 120px;">日期</th><th>A表 (讀數)</th><th>B表 (讀數)</th></tr>`;
+                    // 🌟 關鍵修改：雙錶專用排版，增加各自的用量顯示欄位
+                    tableHead = `<tr><th style="width: 90px;">日期</th><th>A表讀數</th><th>B表讀數</th><th>A表用量</th><th>B表用量</th></tr>`;
                     tableBody = dates.map((dateStr, dIdx) => `
                         <tr>
-                            <td class="font-semibold bg-gray-50">${dateStr}</td>
+                            <td class="font-semibold bg-gray-50 text-sm">${dateStr}</td>
                             <td><input type="number" step="0.01" class="cell-input" id="${item.id}_a_${dIdx}" data-id="${item.id}_a_${dIdx}" oninput="calcMasterTable()" placeholder="A表"></td>
                             <td><input type="number" step="0.01" class="cell-input" id="${item.id}_b_${dIdx}" data-id="${item.id}_b_${dIdx}" oninput="calcMasterTable()" placeholder="B表"></td>
+                            <td id="usage_${item.id}_a_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td>
+                            <td id="usage_${item.id}_b_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td>
                         </tr>
                     `).join('');
                 } else {
@@ -567,9 +527,7 @@
                     <div id="${tabId}" class="tab-content bg-white p-4 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0">
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-xl font-bold text-blue-800">📌 ${item.label} - 每日度數紀錄</h2>
-                            <button onclick="syncDataToCloud()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium">
-                                ☁️ 儲存至雲端
-                            </button>
+                            <button onclick="syncDataToCloud()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium">☁️ 儲存至雲端</button>
                         </div>
                         <div class="table-container">
                             <table class="fixed-table">
@@ -586,13 +544,9 @@
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
-            
             document.getElementById(tabId).classList.add('active');
             document.getElementById(`btn-${tabId}`).classList.add('active');
-
-            if (tabId === 'tab-master') {
-                calcMasterTable();
-            }
+            if (tabId === 'tab-master') calcMasterTable();
         }
 
         function handleCloseInput(itemId, dIdx) {
@@ -606,15 +560,10 @@
             calcMasterTable();
         }
 
-        // --- 核心計算：取得當日與昨日的真實用量差值 ---
         function getRawUsage(baseId, dIdx, isTime) {
             let currStr = document.getElementById(`${baseId}_${dIdx}`)?.value;
             if (!currStr) return null;
-
-            if (dIdx === 0) {
-                return isTime ? null : parseFloat(currStr);
-            }
-
+            if (dIdx === 0) return isTime ? null : parseFloat(currStr);
             let prevStr = document.getElementById(`${baseId}_${dIdx - 1}`)?.value;
             if (!prevStr) return null;
 
@@ -655,11 +604,42 @@
                         rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
                         
                     } else if (item.type === 'dual') {
+                        // 🌟 關鍵修改：小支軟水 A/B 採用「31號數值 - 30號數值」的向前運算邏輯
+                        let currA = document.getElementById(`${item.id}_a_${dIdx}`)?.value;
+                        let currB = document.getElementById(`${item.id}_b_${dIdx}`)?.value;
+                        // 抓取明天的讀數
+                        let nextA = document.getElementById(`${item.id}_a_${dIdx + 1}`)?.value;
+                        let nextB = document.getElementById(`${item.id}_b_${dIdx + 1}`)?.value;
+                        
+                        let diffA = null;
+                        let diffB = null;
+
+                        // 計算 A 表當日用量 (絕對值計算，即使數值變小也能正確算出差額 3.74)
+                        if (currA && currA.trim() !== '' && nextA && nextA.trim() !== '') {
+                            diffA = Math.abs(parseFloat(nextA) - parseFloat(currA));
+                            let tdA = document.getElementById(`usage_${item.id}_a_${dIdx}`);
+                            if(tdA) tdA.innerText = diffA.toFixed(2);
+                        } else {
+                            let tdA = document.getElementById(`usage_${item.id}_a_${dIdx}`);
+                            if(tdA) tdA.innerText = '-';
+                        }
+
+                        // 計算 B 表當日用量
+                        if (currB && currB.trim() !== '' && nextB && nextB.trim() !== '') {
+                            diffB = Math.abs(parseFloat(nextB) - parseFloat(currB));
+                            let tdB = document.getElementById(`usage_${item.id}_b_${dIdx}`);
+                            if(tdB) tdB.innerText = diffB.toFixed(2);
+                        } else {
+                            let tdB = document.getElementById(`usage_${item.id}_b_${dIdx}`);
+                            if(tdB) tdB.innerText = '-';
+                        }
+
+                        // 總表自動加總
                         let totalVal = null;
-                        ['a', 'b'].forEach(state => {
-                            let diff = getRawUsage(`${item.id}_${state}`, dIdx, false);
-                            if (diff !== null) totalVal = (totalVal || 0) + diff;
-                        });
+                        if (diffA !== null || diffB !== null) {
+                            totalVal = (diffA || 0) + (diffB || 0);
+                        }
+
                         let usage = totalVal !== null ? totalVal.toFixed(2) : '-';
                         rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
                         
@@ -682,10 +662,7 @@
             toast.innerHTML = `${icon} ${message}`;
             container.appendChild(toast);
             
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => toast.classList.add('show'));
-            });
-            
+            requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('show')));
             setTimeout(() => {
                 toast.classList.remove('show');
                 setTimeout(() => toast.remove(), 300);
