@@ -52,14 +52,20 @@
             box-shadow: 0 -2px 4px rgba(0,0,0,0.05);
         }
 
+        /* 🌟 修改點：移除總表的高度限制，讓它完全展開以便截圖 */
         .table-container {
-            max-height: calc(100vh - 240px);
-            overflow: auto;
+            overflow-x: auto;
             background: white;
             border-radius: 0 8px 8px 8px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             border: 1px solid #cbd5e1;
             border-top: none;
+        }
+        
+        /* 針對分頁限制高度（總表不限制） */
+        .tab-content:not(#tab-master) .table-container {
+            max-height: calc(100vh - 240px);
+            overflow-y: auto;
         }
 
         table.fixed-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -114,7 +120,6 @@
         .spinner { border: 4px solid rgba(0, 0, 0, 0.1); border-left-color: #2563eb; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* 🖨️ 列印專屬樣式設定 */
         @media print {
             body { background-color: white; }
             nav, #mainContainer, #toast-container { display: none !important; }
@@ -152,7 +157,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                     </div>
-                    <span class="font-bold text-xl text-gray-800">智慧收尾用量系統 <span class="text-sm font-normal text-gray-500 ml-2">(雲端版)</span></span>
+                    <span class="font-bold text-xl text-gray-800" id="system-title-nav">智慧收尾用量系統 <span class="text-sm font-normal text-gray-500 ml-2">(雲端版)</span></span>
                 </div>
                 <div>
                     <button onclick="fetchDataFromCloud()" class="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-lg shadow-sm text-sm font-bold flex items-center gap-1 transition-colors">
@@ -168,7 +173,6 @@
         <div id="tabsContentContainer"></div>
     </div>
 
-    <!-- 現場填報專用畫面 -->
     <div id="fieldWorkerView" class="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center p-4" style="display: none;">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md text-center">
             <div class="bg-blue-600 p-4 rounded-xl text-white mb-6">
@@ -186,7 +190,6 @@
         </div>
     </div>
 
-    <!-- 🖨️ QR Code 產生器彈跳視窗 -->
     <div id="qrModal" class="fixed inset-0 bg-black/60 z-[100] hidden flex-col items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl p-6 relative flex flex-col max-h-[90vh]">
             <button onclick="closeQrModal()" class="print-hide absolute top-4 right-4 text-gray-400 hover:text-gray-800 text-3xl font-bold">&times;</button>
@@ -199,7 +202,6 @@
             <p class="print-hide text-sm text-gray-500 mb-4">系統已自動為每個設備建立專屬 QR Code，列印後裁切即可貼在現場。</p>
             
             <div id="qrPrintArea" class="grid grid-cols-2 md:grid-cols-3 gap-6 overflow-y-auto p-4 bg-gray-50 rounded-lg">
-                <!-- QR Codes 會透過 JavaScript 動態生成注入這裡 -->
             </div>
         </div>
     </div>
@@ -207,14 +209,26 @@
     <script>
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwfzOoGGdXKa1qY9jOi0H4D5DcR6wJ0Af8yaw6qvNS0TKqtD0AHa1UQ92ib_sAqUweqiQ/exec'; 
 
+        // 🌟 核心修改：動態產生月份日期
         const dates = [];
-        for (let d = 1; d <= 31; d++) {
+        const today = new Date();
+        const currentYear = today.getFullYear() - 1911; // 轉為民國年 (115)
+        const currentMonth = today.getMonth() + 1; // 1~12
+        
+        // 取得當月最後一天
+        const daysInMonth = new Date(today.getFullYear(), currentMonth, 0).getDate();
+        
+        for (let d = 1; d <= daysInMonth; d++) {
             const dayStr = d < 10 ? `0${d}` : `${d}`;
             const weekdays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
-            const dateObj = new Date(2026, 7, d);
+            const dateObj = new Date(today.getFullYear(), today.getMonth(), d);
             const wday = weekdays[dateObj.getDay()];
-            dates.push(`08/${dayStr} (${wday})`);
+            // 格式：08/01 (週六)
+            const monthStr = currentMonth < 10 ? `0${currentMonth}` : `${currentMonth}`;
+            dates.push(`${monthStr}/${dayStr} (${wday})`);
         }
+        
+        const titleText = `${currentYear}年${currentMonth}月份`;
 
         const items = [
             { id: 'boiler1', label: '蒸氣高燃鍋爐', type: 'time_oc' },
@@ -231,6 +245,10 @@
         let activeFieldItem = null;
 
         window.onload = () => {
+            // 更新網頁標題
+            document.title = `智慧收尾用量系統 - ${titleText}`;
+            document.getElementById('system-title-nav').innerHTML = `智慧收尾用量系統 <span class="text-sm font-normal text-gray-500 ml-2">(${titleText})</span>`;
+            
             const urlParams = new URLSearchParams(window.location.search);
             const qrParam = urlParams.get('qr');
             
@@ -375,8 +393,9 @@
                 selectEl.innerHTML += `<option value="${idx}">${dStr}</option>`;
             });
 
-            const today = new Date();
-            let tomorrowIdx = today.getDate(); 
+            // 預設為明天
+            const td = new Date();
+            let tomorrowIdx = td.getDate(); // index 剛好對應日期
             if (tomorrowIdx >= dates.length) tomorrowIdx = dates.length - 1;
             selectEl.value = tomorrowIdx;
 
@@ -505,19 +524,19 @@
             let thHtml = '<th class="col-date">日期</th>';
             items.forEach(item => { thHtml += `<th class="col-std">${item.label}用量</th>`; });
 
-            tabsContainer.innerHTML += `<button onclick="switchTab('tab-master')" id="btn-tab-master" class="nav-tab active">📊 8/1-8/31 用量總表</button>`;
+            tabsContainer.innerHTML += `<button onclick="switchTab('tab-master')" id="btn-tab-master" class="nav-tab active">📊 ${currentMonth}/1-${currentMonth}/${daysInMonth} 用量總表</button>`;
 
             contentContainer.innerHTML += `
                 <div id="tab-master" class="tab-content active bg-white p-4 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0">
                     <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
-                        <h2 class="text-xl font-bold text-gray-700">📅 115年8月份設備用量總結算表 (雲端同步版)</h2>
+                        <h2 class="text-xl font-bold text-gray-700">📅 ${titleText}設備用量總結算表 (雲端同步版)</h2>
                         <div class="flex flex-wrap gap-2 print-hide">
                             <button onclick="syncDataToCloud()" id="saveBtn" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">☁️ 儲存至試算表</button>
                             <button onclick="openQrModal()" class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">🖨️ 列印 QR Code</button>
-                            <button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">📸 截圖傳送</button>
+                            <button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">📸 截圖分享總表</button>
                         </div>
                     </div>
-                    <div class="table-container">
+                    <div class="table-container" id="masterTableContainer">
                         <table class="master-table" id="masterTable">
                             <thead><tr>${thHtml}</tr></thead>
                             <tbody id="masterTableBody"></tbody>
@@ -732,31 +751,44 @@
             document.getElementById('loading-overlay').style.display = 'none';
         }
 
-        // 🌟 新版截圖與原生分享功能
+        // 🌟 修復截圖範圍：確保截取整個表格 (移除滾動條的遮擋)
         async function takeScreenshot() {
             switchTab('tab-master');
-            showToast('正在產生截圖並準備分享...', 'loading');
+            showToast('正在產生完整總表截圖，請稍候...', 'loading');
             
             try {
-                // 等待畫面渲染切換完畢
-                await new Promise(resolve => requestAnimationFrame(resolve));
+                // 等待畫面渲染
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                const tableContainer = document.getElementById('masterTableContainer');
+                
+                // 暫時解除高度限制以獲取完整內容
+                const originalMaxHeight = tableContainer.style.maxHeight;
+                const originalOverflow = tableContainer.style.overflow;
+                tableContainer.style.maxHeight = 'none';
+                tableContainer.style.overflow = 'visible';
                 
                 const canvas = await html2canvas(document.querySelector('#tab-master'), { 
-                    scale: 1.5, // 稍微縮小以減少檔案大小
-                    backgroundColor: '#ffffff' 
+                    scale: 2, // 提高清晰度
+                    backgroundColor: '#ffffff',
+                    windowWidth: document.querySelector('#tab-master').scrollWidth,
+                    windowHeight: document.querySelector('#tab-master').scrollHeight
                 });
                 
+                // 恢復原本樣式
+                tableContainer.style.maxHeight = originalMaxHeight;
+                tableContainer.style.overflow = originalOverflow;
+                
                 canvas.toBlob(async (blob) => {
-                    const fileName = '115年8月雲端用量總表_截圖.jpg';
+                    const fileName = `${titleText}設備用量總結算表.jpg`;
                     const file = new File([blob], fileName, { type: 'image/jpeg' });
                     
-                    // 檢查手機瀏覽器是否支援 Web Share API 分享檔案
                     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
                         try {
                             await navigator.share({
                                 files: [file],
-                                title: '設備用量總結算表',
-                                text: '115年8月份設備用量總結算表'
+                                title: fileName,
+                                text: fileName
                             });
                             showToast('✅ 成功開啟分享選單！', 'success');
                         } catch (error) {
@@ -764,14 +796,14 @@
                                 showToast('❌ 分享失敗，改為直接下載', 'error');
                                 downloadFallback(blob, fileName);
                             } else {
-                                hideLoading(); // 用戶取消分享
+                                hideLoading();
                             }
                         }
                     } else {
-                        showToast('📥 您的裝置不支援直接分享，改為自動下載', 'success');
+                        showToast('📥 裝置不支援分享，改為自動下載', 'success');
                         downloadFallback(blob, fileName);
                     }
-                }, 'image/jpeg', 0.85); // 使用 JPEG 品質 85% 壓縮
+                }, 'image/jpeg', 0.9);
                 
             } catch (error) {
                 showToast('❌ 截圖發生錯誤', 'error');
