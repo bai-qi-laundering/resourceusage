@@ -480,13 +480,8 @@
             // --- 總表的動態表頭生成 ---
             let thHtml = '<th class="col-date">日期</th>';
             items.forEach(item => {
-                if (item.type === 'time_3') {
-                    thHtml += `<th class="col-std">${item.label}(低)</th><th class="col-std">${item.label}(中)</th><th class="col-std">${item.label}(高)</th>`;
-                } else if (item.type === 'dual') {
-                    thHtml += `<th class="col-std">${item.label}(A表)</th><th class="col-std">${item.label}(B表)</th>`;
-                } else {
-                    thHtml += `<th class="col-std">${item.label}用量</th>`;
-                }
+                // 修改：無論是哪種類型的設備，在總表都只產生「一個」總用量的欄位
+                thHtml += `<th class="col-std">${item.label}用量</th>`;
             });
 
             // 總表
@@ -613,28 +608,29 @@
             calcMasterTable();
         }
 
-        // --- 核心計算：處理當日與昨日相減，或是時間相減 ---
-        function calcUsage(baseId, dIdx, isTime) {
+        // --- 核心計算：取得當日與昨日的真實用量差值 ---
+        function getRawUsage(baseId, dIdx, isTime) {
             let currStr = document.getElementById(`${baseId}_${dIdx}`)?.value;
-            if (!currStr) return '-';
+            if (!currStr) return null;
 
             if (dIdx === 0) {
-                return isTime ? '-' : parseFloat(currStr).toFixed(2);
+                // 第一天若無前一天的度數可扣除，數值型預設顯示當天填寫數字，時間型則不顯示
+                return isTime ? null : parseFloat(currStr);
             }
 
             let prevStr = document.getElementById(`${baseId}_${dIdx - 1}`)?.value;
-            if (!prevStr) return '-';
+            if (!prevStr) return null;
 
             if (isTime) {
                 let currMins = timeToMins(currStr);
                 let prevMins = timeToMins(prevStr);
-                if (currMins !== null && prevMins !== null) return minsToTime(currMins - prevMins);
+                if (currMins !== null && prevMins !== null) return currMins - prevMins;
             } else {
                 let currNum = parseFloat(currStr);
                 let prevNum = parseFloat(prevStr);
-                if (!isNaN(currNum) && !isNaN(prevNum)) return (currNum - prevNum).toFixed(2);
+                if (!isNaN(currNum) && !isNaN(prevNum)) return currNum - prevNum;
             }
-            return '-';
+            return null;
         }
 
         function calcMasterTable() {
@@ -651,20 +647,31 @@
                         let usage = '-';
                         if (openVal !== null && closeVal !== null) usage = minsToTime(closeVal - openVal);
                         rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
+                        
                     } else if (item.type === 'time_3') {
-                        const low = calcUsage(item.id + '_low', dIdx, true);
-                        const mid = calcUsage(item.id + '_mid', dIdx, true);
-                        const high = calcUsage(item.id + '_high', dIdx, true);
-                        rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${low}</td>
-                                    <td class="col-std font-bold text-blue-600 bg-blue-50/50">${mid}</td>
-                                    <td class="col-std font-bold text-blue-600 bg-blue-50/50">${high}</td>`;
+                        // 蒸氣鍋爐2：將 低、中、高 三個時段的(今日-昨日)時間差加總起來
+                        let totalMins = null;
+                        ['low', 'mid', 'high'].forEach(state => {
+                            let diff = getRawUsage(`${item.id}_${state}`, dIdx, true);
+                            if (diff !== null) totalMins = (totalMins || 0) + diff;
+                        });
+                        let usage = totalMins !== null ? minsToTime(totalMins) : '-';
+                        rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
+                        
                     } else if (item.type === 'dual') {
-                        const a = calcUsage(item.id + '_a', dIdx, false);
-                        const b = calcUsage(item.id + '_b', dIdx, false);
-                        rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${a}</td>
-                                    <td class="col-std font-bold text-blue-600 bg-blue-50/50">${b}</td>`;
+                        // 小支軟水 A/B：將 A表 和 B表 的(今日-昨日)度數差加總起來
+                        let totalVal = null;
+                        ['a', 'b'].forEach(state => {
+                            let diff = getRawUsage(`${item.id}_${state}`, dIdx, false);
+                            if (diff !== null) totalVal = (totalVal || 0) + diff;
+                        });
+                        let usage = totalVal !== null ? totalVal.toFixed(2) : '-';
+                        rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
+                        
                     } else {
-                        const usage = calcUsage(item.id, dIdx, false);
+                        // 一般數值：直接計算(今日-昨日)
+                        let diff = getRawUsage(item.id, dIdx, false);
+                        let usage = diff !== null ? diff.toFixed(2) : '-';
                         rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
                     }
                 });
