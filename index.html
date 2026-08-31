@@ -216,7 +216,6 @@
             dates.push(`08/${dayStr} (${wday})`);
         }
 
-        // 📝 設備清單 (瓦斯已分開，軟水A/B已合併)
         const items = [
             { id: 'boiler1', label: '蒸氣高燃鍋爐', type: 'time_oc' },
             { id: 'boiler2', label: '蒸氣鍋爐2', type: 'time_3' },
@@ -253,19 +252,14 @@
             }
         };
 
-        // --- 🖨️ QR Code 列印相關函式 ---
         function openQrModal() {
             const printArea = document.getElementById('qrPrintArea');
             printArea.innerHTML = '';
-            
-            // 抓取目前的純淨網址 (移除 ?qr=xxx 後的參數)
             const baseUrl = window.location.href.split('?')[0];
 
             items.forEach(item => {
                 const targetUrl = `${baseUrl}?qr=${item.id}`;
-                // 使用 api.qrserver.com 產生 QR Code 圖片
                 const qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(targetUrl)}`;
-                
                 printArea.innerHTML += `
                     <div class="flex flex-col items-center bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                         <h3 class="text-xl font-bold text-gray-800 mb-4">${item.label}</h3>
@@ -274,7 +268,6 @@
                     </div>
                 `;
             });
-            
             const modal = document.getElementById('qrModal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
@@ -286,14 +279,11 @@
             modal.classList.remove('flex');
         }
 
-
-        // 🌟 超過 60 分鐘的小數自動換算 (乘0.6進位)
         function autoFormatTime(str) {
             if (!str || !str.includes(':')) return str;
             const parts = str.split(':');
             const hrs = parts[0];
             const mins = parseInt(parts[1], 10);
-            
             if (!isNaN(mins) && mins >= 60) {
                 const newMins = Math.ceil(mins * 0.6);
                 return `${hrs}:${newMins.toString().padStart(2, '0')}`;
@@ -452,7 +442,6 @@
                 val = autoFormatTime(val); 
                 dataToSubmit[`${item.id}_e_${dateIdx}`] = val;
                 if (dateIdx + 1 < dates.length) dataToSubmit[`${item.id}_s_${dateIdx + 1}`] = val;
-                
             } else if (item.type === 'time_3') {
                 let l = autoFormatTime(document.getElementById('fieldVal_low').value.trim());
                 let m = autoFormatTime(document.getElementById('fieldVal_mid').value.trim());
@@ -461,14 +450,12 @@
                 if (l) dataToSubmit[`${item.id}_low_${dateIdx}`] = l;
                 if (m) dataToSubmit[`${item.id}_mid_${dateIdx}`] = m;
                 if (h) dataToSubmit[`${item.id}_high_${dateIdx}`] = h;
-                
             } else if (item.type === 'dual') {
                 const a = document.getElementById('fieldVal_a').value.trim();
                 const b = document.getElementById('fieldVal_b').value.trim();
                 if (!a && !b) { showToast('請至少填寫一個表', 'error'); return; }
                 if (a) dataToSubmit[`${item.id}_a_${dateIdx}`] = a;
                 if (b) dataToSubmit[`${item.id}_b_${dateIdx}`] = b;
-                
             } else {
                 const val = document.getElementById('fieldVal').value.trim();
                 if (!val) { showToast('請輸入數值', 'error'); return; }
@@ -520,12 +507,11 @@
 
             tabsContainer.innerHTML += `<button onclick="switchTab('tab-master')" id="btn-tab-master" class="nav-tab active">📊 8/1-8/31 用量總表</button>`;
 
-            // 總表介面，加入 QR Code 按鈕
             contentContainer.innerHTML += `
                 <div id="tab-master" class="tab-content active bg-white p-4 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0">
                     <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
                         <h2 class="text-xl font-bold text-gray-700">📅 115年8月份設備用量總結算表 (雲端同步版)</h2>
-                        <div class="flex flex-wrap gap-2">
+                        <div class="flex flex-wrap gap-2 print-hide">
                             <button onclick="syncDataToCloud()" id="saveBtn" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">☁️ 儲存至試算表</button>
                             <button onclick="openQrModal()" class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">🖨️ 列印 QR Code</button>
                             <button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">📸 截圖傳送</button>
@@ -746,17 +732,60 @@
             document.getElementById('loading-overlay').style.display = 'none';
         }
 
-        function takeScreenshot() {
+        // 🌟 新版截圖與原生分享功能
+        async function takeScreenshot() {
             switchTab('tab-master');
-            showToast('正在產生截圖，請稍候...', 'loading');
-            setTimeout(() => {
-                html2canvas(document.querySelector('#tab-master'), { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
-                    const link = document.createElement('a');
-                    link.download = '115年8月雲端用量總表_截圖.png';
-                    link.href = canvas.toDataURL('image/png');
-                    link.click();
+            showToast('正在產生截圖並準備分享...', 'loading');
+            
+            try {
+                // 等待畫面渲染切換完畢
+                await new Promise(resolve => requestAnimationFrame(resolve));
+                
+                const canvas = await html2canvas(document.querySelector('#tab-master'), { 
+                    scale: 1.5, // 稍微縮小以減少檔案大小
+                    backgroundColor: '#ffffff' 
                 });
-            }, 300);
+                
+                canvas.toBlob(async (blob) => {
+                    const fileName = '115年8月雲端用量總表_截圖.jpg';
+                    const file = new File([blob], fileName, { type: 'image/jpeg' });
+                    
+                    // 檢查手機瀏覽器是否支援 Web Share API 分享檔案
+                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                        try {
+                            await navigator.share({
+                                files: [file],
+                                title: '設備用量總結算表',
+                                text: '115年8月份設備用量總結算表'
+                            });
+                            showToast('✅ 成功開啟分享選單！', 'success');
+                        } catch (error) {
+                            if (error.name !== 'AbortError') {
+                                showToast('❌ 分享失敗，改為直接下載', 'error');
+                                downloadFallback(blob, fileName);
+                            } else {
+                                hideLoading(); // 用戶取消分享
+                            }
+                        }
+                    } else {
+                        showToast('📥 您的裝置不支援直接分享，改為自動下載', 'success');
+                        downloadFallback(blob, fileName);
+                    }
+                }, 'image/jpeg', 0.85); // 使用 JPEG 品質 85% 壓縮
+                
+            } catch (error) {
+                showToast('❌ 截圖發生錯誤', 'error');
+                hideLoading();
+            }
+        }
+
+        function downloadFallback(blob, fileName) {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = fileName;
+            link.href = url;
+            link.click();
+            URL.revokeObjectURL(url);
         }
     </script>
 </body>
