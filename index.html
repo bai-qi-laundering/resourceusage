@@ -52,19 +52,16 @@
             box-shadow: 0 -2px 4px rgba(0,0,0,0.05);
         }
 
-        /* 🌟 移除總表高度限制 */
+        /* 🌟 恢復高度限制並設定表頭凍結 */
         .table-container {
-            overflow-x: auto;
+            max-height: calc(100vh - 240px); /* 限制高度，使內部可以滾動 */
+            overflow: auto;
             background: white;
             border-radius: 0 8px 8px 8px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             border: 1px solid #cbd5e1;
             border-top: none;
-        }
-        
-        .tab-content:not(#tab-master) .table-container {
-            max-height: calc(100vh - 240px);
-            overflow-y: auto;
+            position: relative; 
         }
 
         table.fixed-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -77,9 +74,13 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+        
+        /* ❄️ 凍結分頁表頭 */
         table.fixed-table th {
             position: sticky; top: 0; background-color: #bfdbfe; color: #1e3a8a !important;
             font-weight: 800 !important; font-size: 14px; z-index: 10; padding: 10px 4px;
+            /* 確保表頭下方有邊線，否則滾動時會漏縫 */
+            box-shadow: inset 0 -1px 0 #cbd5e1; 
         }
 
         table.master-table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
@@ -87,15 +88,23 @@
             border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1;
             text-align: center; vertical-align: middle; padding: 4px; box-sizing: border-box;
         }
+        
+        /* ❄️ 凍結總表表頭 */
         table.master-table th {
             position: sticky; top: 0; background-color: #bfdbfe; color: #1e3a8a !important;
             font-weight: 800 !important; font-size: 13px; z-index: 10; white-space: nowrap; padding: 10px 4px;
+            box-shadow: inset 0 -1px 0 #cbd5e1;
         }
+        
+        /* ❄️ 凍結總表第一列 (日期) 並且確保左上角重疊處的 z-index 最高 */
         table.master-table th.col-date, table.master-table td.col-date {
             width: 110px; min-width: 110px; max-width: 110px; position: sticky; left: 0;
             background-color: #f1f5f9; z-index: 5; font-weight: 600;
         }
-        table.master-table th.col-date { z-index: 15; background-color: #93c5fd; }
+        table.master-table th.col-date { 
+            z-index: 15; /* 左上角那格 */
+            background-color: #93c5fd; 
+        }
         table.master-table .col-std { width: 90px; min-width: 90px; max-width: 90px; }
 
         input.cell-input {
@@ -119,19 +128,16 @@
         .spinner { border: 4px solid rgba(0, 0, 0, 0.1); border-left-color: #2563eb; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        body.capturing { overflow: visible !important; }
-        body.capturing #mainContainer, 
-        body.capturing #tab-master, 
-        body.capturing .table-container {
-            width: max-content !important;
-            max-width: none !important;
-            overflow: visible !important;
-            max-height: none !important;
-            height: auto !important;
-        }
+        /* 📸 截圖時隱藏不需要的列 */
         body.capturing .print-hide { display: none !important; }
-        body.capturing table.master-table th,
-        body.capturing table.master-table td {
+        body.capturing .hide-row { display: none !important; } /* 隱藏 10 天以外的行 */
+        body.capturing .table-container {
+            max-height: none !important; /* 解除高度限制以顯示所有需要的行 */
+            overflow: visible !important;
+        }
+        /* 截圖時解除表頭的 sticky，避免排版錯亂 */
+        body.capturing table.master-table th, 
+        body.capturing table.master-table td.col-date {
             position: static !important;
         }
 
@@ -309,10 +315,16 @@
         }
 
         function autoFormatTime(str) {
-            if (!str || !str.includes(':')) return str;
-            let cleanStr = str;
+            if (!str || str.toString().trim() === '') return str;
+            let cleanStr = str.toString().trim();
             if (cleanStr.startsWith("'")) cleanStr = cleanStr.substring(1);
             
+            if (cleanStr.includes('.')) {
+                cleanStr = cleanStr.replace('.', ':');
+            }
+            
+            if (!cleanStr.includes(':')) return cleanStr;
+
             const parts = cleanStr.split(':');
             const hrs = parts[0];
             const mins = parseInt(parts[1], 10);
@@ -329,13 +341,15 @@
             let s = str.toString().trim();
             if (s.startsWith("'")) s = s.substring(1);
             
+            if (s.includes('.')) {
+                s = s.replace('.', ':');
+            }
+            
+            s = autoFormatTime(s);
+
             let h = 0, m = 0;
             if (s.includes(':')) {
                 let p = s.split(':');
-                h = parseInt(p[0], 10) || 0;
-                m = parseInt(p[1], 10) || 0;
-            } else if (s.includes('.')) {
-                let p = s.split('.');
                 h = parseInt(p[0], 10) || 0;
                 m = parseInt(p[1], 10) || 0;
             } else {
@@ -570,7 +584,7 @@
                         <div class="flex flex-wrap gap-2 print-hide">
                             <button onclick="syncDataToCloud()" id="saveBtn" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">☁️ 儲存至試算表</button>
                             <button onclick="openQrModal()" class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">🖨️ 列印 QR Code</button>
-                            <button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">📸 截圖分享總表</button>
+                            <button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">📸 截圖分享 (10天)</button>
                         </div>
                     </div>
                     <div class="table-container" id="masterTableContainer">
@@ -666,14 +680,15 @@
             calcMasterTable();
         }
 
-        // 🌟 計算每天與前一天的差值 (僅套用在一般設備)
-        function getRawUsage(baseId, dIdx) {
+        function getRawUsage(baseId, dIdx, isTime) {
             let currStr = document.getElementById(`${baseId}_${dIdx}`)?.value;
             if (!currStr || currStr.includes('跑位')) return null;
             
-            // 如果是第一天，沒有昨天可以減，就直接回傳當天數字
-            if (dIdx === 0) return parseFloat(currStr);
+            if (isTime) {
+                return timeToMins(currStr);
+            }
             
+            if (dIdx === 0) return null;
             let prevStr = document.getElementById(`${baseId}_${dIdx - 1}`)?.value;
             if (!prevStr || prevStr.includes('跑位')) return null;
 
@@ -702,7 +717,8 @@
             tbody.innerHTML = '';
 
             dates.forEach((dateStr, dIdx) => {
-                let rowHtml = `<tr><td class="col-date">${dateStr}</td>`;
+                // 🌟 新增 data-date-idx 屬性，用來讓截圖功能判斷這行要不要留著
+                let rowHtml = `<tr data-date-idx="${dIdx}"><td class="col-date">${dateStr}</td>`;
                 items.forEach(item => {
                     if (item.type === 'time_oc') {
                         const openVal = timeToMins(document.getElementById(`${item.id}_s_${dIdx}`)?.value);
@@ -712,14 +728,10 @@
                         rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
                         
                     } else if (item.type === 'time_3') {
-                        // 🌟 修正：鍋爐 2 的邏輯是直接「加總當天的三個時間輸入」，不需要跟昨天相減！
                         let totalMins = null;
                         ['low', 'mid', 'high'].forEach(state => {
-                            let currStr = document.getElementById(`${item.id}_${state}_${dIdx}`)?.value;
-                            if (currStr && !currStr.includes('跑位')) {
-                                let mins = timeToMins(currStr);
-                                if (mins !== null) totalMins = (totalMins || 0) + mins;
-                            }
+                            let val = getRawUsage(`${item.id}_${state}`, dIdx, true);
+                            if (val !== null) totalMins = (totalMins || 0) + val;
                         });
                         let usage = totalMins !== null ? minsToTime(totalMins) : '-';
                         rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
@@ -758,8 +770,7 @@
                         rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
                         
                     } else {
-                        // 一般數值：與昨天相減的邏輯
-                        let diff = getRawUsage(item.id, dIdx);
+                        let diff = getRawUsage(item.id, dIdx, false);
                         let usage = diff !== null ? diff.toFixed(2) : '-';
                         rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
                     }
@@ -794,9 +805,22 @@
 
         async function takeScreenshot() {
             switchTab('tab-master');
-            showToast('正在產生完整總表截圖，請稍候...', 'loading');
+            showToast('正在產生 10 天份總表截圖...', 'loading');
             
             try {
+                const todayIdx = new Date().getDate() - 1; // 今天是幾號的 index (例如 31號就是 index 30)
+                let startIdx = todayIdx - 9; // 往前推 9 天，包含今天共 10 天
+                if (startIdx < 0) startIdx = 0; // 最多推到 1 號
+                
+                // 將 10 天以外的行加上隱藏 class
+                const rows = document.querySelectorAll('#masterTableBody tr');
+                rows.forEach(row => {
+                    const rowIdx = parseInt(row.getAttribute('data-date-idx'));
+                    if (rowIdx < startIdx || rowIdx > todayIdx) {
+                        row.classList.add('hide-row');
+                    }
+                });
+
                 await new Promise(resolve => setTimeout(resolve, 500));
                 
                 document.body.classList.add('capturing');
@@ -812,9 +836,14 @@
                 });
                 
                 document.body.classList.remove('capturing');
+                // 截圖後恢復所有行
+                rows.forEach(row => row.classList.remove('hide-row'));
                 
                 canvas.toBlob(async (blob) => {
-                    const fileName = `${titleText}設備用量總結算表.jpg`;
+                    const startDateStr = dates[startIdx].split(' ')[0]; // 取出 "08/22"
+                    const endDateStr = dates[todayIdx].split(' ')[0];   // 取出 "08/31"
+                    const fileName = `用量總表_${startDateStr}至${endDateStr}.jpg`.replace(/\//g, '');
+                    
                     const file = new File([blob], fileName, { type: 'image/jpeg' });
                     
                     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -841,6 +870,8 @@
                 
             } catch (error) {
                 document.body.classList.remove('capturing');
+                const rows = document.querySelectorAll('#masterTableBody tr');
+                rows.forEach(row => row.classList.remove('hide-row'));
                 showToast('❌ 截圖發生錯誤', 'error');
                 hideLoading();
             }
