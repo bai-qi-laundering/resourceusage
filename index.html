@@ -203,11 +203,11 @@
         }
 
         /* 
-           定義所有品項與其填寫類型:
-           - time_oc: 有開/收，且支援冒號時間格式
-           - time_3: 3個狀態(低中高)，支援冒號時間格式
-           - normal: 一般單一數值
-           - dual: 一個頁面填兩個表(A表/B表)
+            定義所有品項與其填寫類型:
+            - time_oc: 有開/收，且支援冒號時間格式
+            - time_3: 3個狀態(低中高)，支援冒號時間格式
+            - normal: 一般單一數值
+            - dual: 一個頁面填兩個表(A表/B表)
         */
         const items = [
             { id: 'boiler1', label: '蒸氣高燃鍋爐', type: 'time_oc' },
@@ -218,8 +218,7 @@
             { id: 'water_s', label: '小支自來水', type: 'normal' },
             { id: 'soft_a', label: '大支軟水A', type: 'normal' },
             { id: 'soft_ab', label: '小支軟水A/B', type: 'dual' },
-            { id: 'soft_m1', label: '軟水表1', type: 'normal' },
-            { id: 'soft_m2', label: '軟水表2', type: 'normal' },
+            // 注意：軟水表1 與 軟水表2 已經在這裡被刪除了！
             { id: 'meng', label: '猛砂', type: 'normal' }
         ];
 
@@ -480,7 +479,6 @@
             // --- 總表的動態表頭生成 ---
             let thHtml = '<th class="col-date">日期</th>';
             items.forEach(item => {
-                // 修改：無論是哪種類型的設備，在總表都只產生「一個」總用量的欄位
                 thHtml += `<th class="col-std">${item.label}用量</th>`;
             });
 
@@ -614,7 +612,6 @@
             if (!currStr) return null;
 
             if (dIdx === 0) {
-                // 第一天若無前一天的度數可扣除，數值型預設顯示當天填寫數字，時間型則不顯示
                 return isTime ? null : parseFloat(currStr);
             }
 
@@ -649,7 +646,6 @@
                         rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
                         
                     } else if (item.type === 'time_3') {
-                        // 蒸氣鍋爐2：將 低、中、高 三個時段的(今日-昨日)時間差加總起來
                         let totalMins = null;
                         ['low', 'mid', 'high'].forEach(state => {
                             let diff = getRawUsage(`${item.id}_${state}`, dIdx, true);
@@ -659,7 +655,6 @@
                         rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
                         
                     } else if (item.type === 'dual') {
-                        // 小支軟水 A/B：將 A表 和 B表 的(今日-昨日)度數差加總起來
                         let totalVal = null;
                         ['a', 'b'].forEach(state => {
                             let diff = getRawUsage(`${item.id}_${state}`, dIdx, false);
@@ -669,7 +664,6 @@
                         rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
                         
                     } else {
-                        // 一般數值：直接計算(今日-昨日)
                         let diff = getRawUsage(item.id, dIdx, false);
                         let usage = diff !== null ? diff.toFixed(2) : '-';
                         rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
