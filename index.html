@@ -100,7 +100,6 @@
         }
         input.cell-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2); background-color: #eff6ff; }
 
-        /* Custom Toast Notification 提示框 */
         #toast-container {
             position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;
         }
@@ -114,7 +113,6 @@
         .toast.error { background-color: #ef4444; }
         .toast.loading { background-color: #3b82f6; }
 
-        /* 讀取畫面疊加層 */
         #loading-overlay {
             position: fixed; inset: 0; background: rgba(255,255,255,0.8); z-index: 9998;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
@@ -128,7 +126,6 @@
 </head>
 <body class="text-gray-800">
 
-    <!-- 讀取中遮罩 -->
     <div id="loading-overlay" style="display: none;">
         <div class="spinner mb-4"></div>
         <p class="text-lg font-bold text-blue-600" id="loading-text">雲端資料同步中...</p>
@@ -171,13 +168,10 @@
             <div class="mb-4 text-left">
                 <label class="block text-sm font-bold text-gray-700 mb-1">📅 選擇填報日期：</label>
                 <select id="fieldTargetDate" class="w-full p-3 rounded-lg border border-gray-300 font-semibold bg-gray-50 text-base">
-                    <!-- JS 動態生成 -->
                 </select>
             </div>
 
-            <!-- 動態輸入區 -->
             <div id="field-inputs-container" class="mb-6 text-left">
-                <!-- JS 動態生成 -->
             </div>
 
             <button id="fieldSubmitBtn" onclick="submitFieldData()" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg shadow-lg mb-2 transition-colors">
@@ -187,9 +181,6 @@
     </div>
 
     <script>
-        // ==========================================
-        // ⚠️ 關鍵設定：請在這裡填入您部署 Google Apps Script 的網址
-        // ==========================================
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwfzOoGGdXKa1qY9jOi0H4D5DcR6wJ0Af8yaw6qvNS0TKqtD0AHa1UQ92ib_sAqUweqiQ/exec'; 
 
         const dates = [];
@@ -230,13 +221,27 @@
             }
 
             buildTabsAndViews();
-            
             if (SCRIPT_URL === '請將您部署後的_Google_Apps_Script_網址貼在這裡') {
-                showToast('請務必在程式碼中設定您的 Google Apps Script 網址才能儲存！', 'error');
+                showToast('請務必在程式碼中設定 API 網址才能儲存！', 'error');
             } else {
                 fetchDataFromCloud();
             }
         };
+
+        // 🌟 新增功能：將超過 60 分鐘的小數自動換算 (乘0.6進位)
+        function autoFormatTime(str) {
+            if (!str || !str.includes(':')) return str;
+            const parts = str.split(':');
+            const hrs = parts[0];
+            const mins = parseInt(parts[1], 10);
+            
+            // 若冒號後面 >= 60，就自動 x0.6 並無條件進位
+            if (!isNaN(mins) && mins >= 60) {
+                const newMins = Math.ceil(mins * 0.6);
+                return `${hrs}:${newMins.toString().padStart(2, '0')}`;
+            }
+            return str;
+        }
 
         function timeToMins(str) {
             if (!str || str.trim() === '') return null;
@@ -322,11 +327,9 @@
                 selectEl.innerHTML += `<option value="${idx}">${dStr}</option>`;
             });
 
-            // 🌟 關鍵修改：預設選擇「明天」
             const today = new Date();
-            // getDate() 會回傳 1~31。因為陣列是從 0 開始，所以 getDate() 的數字剛好就是明天的 index！
             let tomorrowIdx = today.getDate(); 
-            if (tomorrowIdx >= dates.length) tomorrowIdx = dates.length - 1; // 避免超過 8/31
+            if (tomorrowIdx >= dates.length) tomorrowIdx = dates.length - 1;
             selectEl.value = tomorrowIdx;
 
             const container = document.getElementById('field-inputs-container');
@@ -334,7 +337,8 @@
             if (item.type === 'time_oc') {
                 container.innerHTML = `
                     <label class="block text-sm font-bold text-gray-700 mb-1">📝 輸入收 (時間讀數) [自動連動隔天開]:</label>
-                    <input type="text" id="fieldVal_e" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="例: 11860:46">
+                    <input type="text" id="fieldVal_e" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="例: 11894:88">
+                    <p class="text-xs text-gray-500 mt-1">※ 若分號後超過 60，系統將自動 x0.6 無條件進位。</p>
                 `;
             } else if (item.type === 'time_3') {
                 container.innerHTML = `
@@ -358,11 +362,11 @@
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-1">💧 A表 (讀數):</label>
-                            <input type="number" step="0.01" id="fieldVal_a" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="A表讀數">
+                            <input type="number" step="0.01" id="fieldVal_a" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="A表讀數 (沒用請打0)">
                         </div>
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-1">💧 B表 (讀數):</label>
-                            <input type="number" step="0.01" id="fieldVal_b" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="B表讀數">
+                            <input type="number" step="0.01" id="fieldVal_b" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="B表讀數 (沒用請打0)">
                         </div>
                     </div>
                 `;
@@ -386,24 +390,29 @@
             const dataToSubmit = {};
 
             if (item.type === 'time_oc') {
-                const val = document.getElementById('fieldVal_e').value.trim();
+                // 送出前自動格式化時間
+                let val = document.getElementById('fieldVal_e').value.trim();
                 if (!val) { showToast('請輸入數值', 'error'); return; }
+                val = autoFormatTime(val); 
                 dataToSubmit[`${item.id}_e_${dateIdx}`] = val;
                 if (dateIdx + 1 < dates.length) dataToSubmit[`${item.id}_s_${dateIdx + 1}`] = val;
+                
             } else if (item.type === 'time_3') {
-                const l = document.getElementById('fieldVal_low').value.trim();
-                const m = document.getElementById('fieldVal_mid').value.trim();
-                const h = document.getElementById('fieldVal_high').value.trim();
+                let l = autoFormatTime(document.getElementById('fieldVal_low').value.trim());
+                let m = autoFormatTime(document.getElementById('fieldVal_mid').value.trim());
+                let h = autoFormatTime(document.getElementById('fieldVal_high').value.trim());
                 if (!l && !m && !h) { showToast('請至少填寫一個燃燒狀態', 'error'); return; }
                 if (l) dataToSubmit[`${item.id}_low_${dateIdx}`] = l;
                 if (m) dataToSubmit[`${item.id}_mid_${dateIdx}`] = m;
                 if (h) dataToSubmit[`${item.id}_high_${dateIdx}`] = h;
+                
             } else if (item.type === 'dual') {
                 const a = document.getElementById('fieldVal_a').value.trim();
                 const b = document.getElementById('fieldVal_b').value.trim();
                 if (!a && !b) { showToast('請至少填寫一個表', 'error'); return; }
                 if (a) dataToSubmit[`${item.id}_a_${dateIdx}`] = a;
                 if (b) dataToSubmit[`${item.id}_b_${dateIdx}`] = b;
+                
             } else {
                 const val = document.getElementById('fieldVal').value.trim();
                 if (!val) { showToast('請輸入數值', 'error'); return; }
@@ -482,13 +491,14 @@
                 let tableHead = '';
                 let tableBody = '';
 
+                // 🌟 加入 onblur 自動換算機制：在總表輸入完滑鼠點旁邊，立刻換算！
                 if (item.type === 'time_oc') {
                     tableHead = `<tr><th style="width: 120px;">日期</th><th>開 (時間)</th><th>收 (時間)</th></tr>`;
                     tableBody = dates.map((dateStr, dIdx) => `
                         <tr>
                             <td class="font-semibold bg-gray-50">${dateStr}</td>
-                            <td><input type="text" class="cell-input" id="${item.id}_s_${dIdx}" data-id="${item.id}_s_${dIdx}" oninput="calcMasterTable()" placeholder="例: 11801:59"></td>
-                            <td><input type="text" class="cell-input" id="${item.id}_e_${dIdx}" data-id="${item.id}_e_${dIdx}" oninput="handleCloseInput('${item.id}', ${dIdx})" placeholder="例: 11860:46"></td>
+                            <td><input type="text" class="cell-input" id="${item.id}_s_${dIdx}" data-id="${item.id}_s_${dIdx}" oninput="calcMasterTable()" onblur="this.value=autoFormatTime(this.value); calcMasterTable()" placeholder="例: 11801:59"></td>
+                            <td><input type="text" class="cell-input" id="${item.id}_e_${dIdx}" data-id="${item.id}_e_${dIdx}" oninput="handleCloseInput('${item.id}', ${dIdx})" onblur="this.value=autoFormatTime(this.value); calcMasterTable()" placeholder="例: 11860:46"></td>
                         </tr>
                     `).join('');
                 } else if (item.type === 'time_3') {
@@ -496,13 +506,12 @@
                     tableBody = dates.map((dateStr, dIdx) => `
                         <tr>
                             <td class="font-semibold bg-gray-50">${dateStr}</td>
-                            <td><input type="text" class="cell-input" id="${item.id}_low_${dIdx}" data-id="${item.id}_low_${dIdx}" oninput="calcMasterTable()" placeholder="例: 100:30"></td>
-                            <td><input type="text" class="cell-input" id="${item.id}_mid_${dIdx}" data-id="${item.id}_mid_${dIdx}" oninput="calcMasterTable()" placeholder="例: 200:15"></td>
-                            <td><input type="text" class="cell-input" id="${item.id}_high_${dIdx}" data-id="${item.id}_high_${dIdx}" oninput="calcMasterTable()" placeholder="例: 300:45"></td>
+                            <td><input type="text" class="cell-input" id="${item.id}_low_${dIdx}" data-id="${item.id}_low_${dIdx}" oninput="calcMasterTable()" onblur="this.value=autoFormatTime(this.value); calcMasterTable()" placeholder="例: 100:30"></td>
+                            <td><input type="text" class="cell-input" id="${item.id}_mid_${dIdx}" data-id="${item.id}_mid_${dIdx}" oninput="calcMasterTable()" onblur="this.value=autoFormatTime(this.value); calcMasterTable()" placeholder="例: 200:15"></td>
+                            <td><input type="text" class="cell-input" id="${item.id}_high_${dIdx}" data-id="${item.id}_high_${dIdx}" oninput="calcMasterTable()" onblur="this.value=autoFormatTime(this.value); calcMasterTable()" placeholder="例: 300:45"></td>
                         </tr>
                     `).join('');
                 } else if (item.type === 'dual') {
-                    // 🌟 關鍵修改：雙錶專用排版，增加各自的用量顯示欄位
                     tableHead = `<tr><th style="width: 90px;">日期</th><th>A表讀數</th><th>B表讀數</th><th>A表用量</th><th>B表用量</th></tr>`;
                     tableBody = dates.map((dateStr, dIdx) => `
                         <tr>
@@ -578,6 +587,26 @@
             }
             return null;
         }
+        
+        // 🌟 新增功能：計算軟水表 12噸換桶邏輯 (不允許負數)
+        function getTankUsage(currStr, nextStr) {
+            if (!currStr || currStr.trim() === '' || !nextStr || nextStr.trim() === '') return null;
+            let c = parseFloat(currStr);
+            let n = parseFloat(nextStr);
+            if (isNaN(c) || isNaN(n)) return null;
+            
+            let usage = 0;
+            if (c >= n) {
+                // 正常扣除：今天大於明天
+                usage = c - n;
+            } else {
+                // 換新桶：明天反而比今天多，代表中間換了一桶 12 噸的
+                // 把舊桶剩下的用完 (c) + 新桶用掉的 (12 - n)
+                usage = c + (12 - n);
+            }
+            // 絕不出現負數防呆機制
+            return Math.max(0, usage);
+        }
 
         function calcMasterTable() {
             const tbody = document.getElementById('masterTableBody');
@@ -604,19 +633,15 @@
                         rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
                         
                     } else if (item.type === 'dual') {
-                        // 🌟 關鍵修改：小支軟水 A/B 採用「31號數值 - 30號數值」的向前運算邏輯
                         let currA = document.getElementById(`${item.id}_a_${dIdx}`)?.value;
                         let currB = document.getElementById(`${item.id}_b_${dIdx}`)?.value;
-                        // 抓取明天的讀數
                         let nextA = document.getElementById(`${item.id}_a_${dIdx + 1}`)?.value;
                         let nextB = document.getElementById(`${item.id}_b_${dIdx + 1}`)?.value;
                         
-                        let diffA = null;
-                        let diffB = null;
+                        let diffA = getTankUsage(currA, nextA);
+                        let diffB = getTankUsage(currB, nextB);
 
-                        // 計算 A 表當日用量 (絕對值計算，即使數值變小也能正確算出差額 3.74)
-                        if (currA && currA.trim() !== '' && nextA && nextA.trim() !== '') {
-                            diffA = Math.abs(parseFloat(nextA) - parseFloat(currA));
+                        if (diffA !== null) {
                             let tdA = document.getElementById(`usage_${item.id}_a_${dIdx}`);
                             if(tdA) tdA.innerText = diffA.toFixed(2);
                         } else {
@@ -624,9 +649,7 @@
                             if(tdA) tdA.innerText = '-';
                         }
 
-                        // 計算 B 表當日用量
-                        if (currB && currB.trim() !== '' && nextB && nextB.trim() !== '') {
-                            diffB = Math.abs(parseFloat(nextB) - parseFloat(currB));
+                        if (diffB !== null) {
                             let tdB = document.getElementById(`usage_${item.id}_b_${dIdx}`);
                             if(tdB) tdB.innerText = diffB.toFixed(2);
                         } else {
@@ -634,7 +657,6 @@
                             if(tdB) tdB.innerText = '-';
                         }
 
-                        // 總表自動加總
                         let totalVal = null;
                         if (diffA !== null || diffB !== null) {
                             totalVal = (diffA || 0) + (diffB || 0);
