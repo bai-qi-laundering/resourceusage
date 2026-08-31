@@ -192,7 +192,7 @@
         // ==========================================
         // ⚠️ 關鍵設定：請在這裡填入您部署 Google Apps Script 的網址
         // ==========================================
-        const SCRIPT_URL = '請將您部署後的_Google_Apps_Script_網址貼在這裡'; 
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwfzOoGGdXKa1qY9jOi0H4D5DcR6wJ0Af8yaw6qvNS0TKqtD0AHa1UQ92ib_sAqUweqiQ/exec'; 
 
         const dates = [];
         for (let d = 1; d <= 31; d++) {
@@ -237,7 +237,7 @@
             buildTabsAndViews();
             
             // 提醒使用者設定 URL
-            if (SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbwfzOoGGdXKa1qY9jOi0H4D5DcR6wJ0Af8yaw6qvNS0TKqtD0AHa1UQ92ib_sAqUweqiQ/exec') {
+            if (SCRIPT_URL === '請將您部署後的_Google_Apps_Script_網址貼在這裡') {
                 showToast('請務必在程式碼中設定您的 Google Apps Script 網址才能儲存！', 'error');
             } else {
                 fetchDataFromCloud();
