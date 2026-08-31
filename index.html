@@ -340,7 +340,7 @@
         }
 
         function timeToMins(str) {
-            if (!str || str.toString().trim() === '') return null;
+            if (!str || str.toString().trim() === '' || str.includes('跑位')) return null;
             let s = str.toString().trim();
             // 移除保護用的單引號
             if (s.startsWith("'")) s = s.substring(1);
@@ -384,7 +384,7 @@
                         if (val.startsWith("'")) val = val.substring(1);
                         
                         // 🌟 防護機制：若舊資料被 Google 擅自變成了 1901-05-07 這類日期，直接顯示格式錯誤
-                        if (val.match(/^\d{4}-\d{2}-\d{2}/)) {
+                        if (val.match(/^\d{4}-\d{2}-\d{2}/) || val.includes('1899') || val.includes('1901')) {
                             val = "格式跑位(請重填)";
                         }
                         
@@ -404,7 +404,7 @@
             if (SCRIPT_URL.includes('請將您部署後')) return;
             const data = {};
             document.querySelectorAll('input.cell-input').forEach(input => {
-                if (input.value.trim() !== '') {
+                if (input.value.trim() !== '' && !input.value.includes('跑位')) {
                     let v = input.value.trim();
                     // 🌟 防護機制：只要裡面有冒號，存入 Google 時前面強制加一個單引號，防止它變成日期
                     if (v.includes(':') && !v.startsWith("'")) v = "'" + v;
@@ -686,10 +686,10 @@
 
         function getRawUsage(baseId, dIdx, isTime) {
             let currStr = document.getElementById(`${baseId}_${dIdx}`)?.value;
-            if (!currStr) return null;
+            if (!currStr || currStr.includes('跑位')) return null;
             if (dIdx === 0) return isTime ? null : parseFloat(currStr);
             let prevStr = document.getElementById(`${baseId}_${dIdx - 1}`)?.value;
-            if (!prevStr) return null;
+            if (!prevStr || prevStr.includes('跑位')) return null;
 
             if (isTime) {
                 let currMins = timeToMins(currStr);
@@ -806,13 +806,13 @@
             document.getElementById('loading-overlay').style.display = 'none';
         }
 
-        // 🌟 截圖全範圍修復機制
+        // 🌟 修復截圖範圍：確保截取整個表格 (移除滾動條的遮擋)
         async function takeScreenshot() {
             switchTab('tab-master');
             showToast('正在產生完整總表截圖，請稍候...', 'loading');
             
             try {
-                // 等待畫面切換渲染
+                // 等待畫面渲染
                 await new Promise(resolve => setTimeout(resolve, 500));
                 
                 // 1. 強制攤開表格
@@ -836,7 +836,6 @@
                     const fileName = `${titleText}設備用量總結算表.jpg`;
                     const file = new File([blob], fileName, { type: 'image/jpeg' });
                     
-                    // 手機原生分享
                     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
                         try {
                             await navigator.share({
@@ -854,14 +853,13 @@
                             }
                         }
                     } else {
-                        // 電腦版或不支援分享的裝置
-                        showToast('📥 您的裝置不支援直接分享，改為自動下載', 'success');
+                        showToast('📥 裝置不支援分享，改為自動下載', 'success');
                         downloadFallback(blob, fileName);
                     }
-                }, 'image/jpeg', 0.85); 
+                }, 'image/jpeg', 0.9);
                 
             } catch (error) {
-                document.body.classList.remove('capturing'); // 確保出錯也會恢復
+                document.body.classList.remove('capturing'); // 確保發生錯誤也會恢復畫面
                 showToast('❌ 截圖發生錯誤', 'error');
                 hideLoading();
             }
