@@ -176,10 +176,9 @@
                 </select>
             </div>
 
-            <div class="mb-6 text-left">
-                <label class="block text-sm font-bold text-gray-700 mb-1" id="field-input-label">📝 輸入讀數：</label>
-                <input type="number" step="0.01" id="fieldValueInput" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="例: 11860.46">
-                <p class="text-xs text-gray-500 mt-1">* 為了計算正確，請輸入小數點取代冒號 (例如 11860:46 請輸入 11860.46)</p>
+            <!-- 動態輸入區 -->
+            <div id="field-inputs-container" class="mb-6 text-left">
+                <!-- JS 動態生成 -->
             </div>
 
             <button id="fieldSubmitBtn" onclick="submitFieldData()" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg shadow-lg mb-2 transition-colors">
@@ -203,17 +202,25 @@
             dates.push(`08/${dayStr} (${wday})`);
         }
 
+        /* 
+           定義所有品項與其填寫類型:
+           - time_oc: 有開/收，且支援冒號時間格式
+           - time_3: 3個狀態(低中高)，支援冒號時間格式
+           - normal: 一般單一數值
+           - dual: 一個頁面填兩個表(A表/B表)
+        */
         const items = [
-            { id: 'boiler1', label: '蒸氣高燃鍋爐', hasOpenClose: true },
-            { id: 'boiler2', label: '蒸氣鍋爐2', hasOpenClose: true },
-            { id: 'gas', label: '瓦斯', hasOpenClose: false },
-            { id: 'water_l', label: '大支自來水', hasOpenClose: false },
-            { id: 'water_s', label: '小支自來水', hasOpenClose: false },
-            { id: 'soft_a', label: '大支軟水A', hasOpenClose: false },
-            { id: 'soft_b', label: '小支軟水B', hasOpenClose: false },
-            { id: 'soft_m1', label: '軟水表1', hasOpenClose: false },
-            { id: 'soft_m2', label: '軟水表2', hasOpenClose: false },
-            { id: 'meng', label: '猛砂', hasOpenClose: false }
+            { id: 'boiler1', label: '蒸氣高燃鍋爐', type: 'time_oc' },
+            { id: 'boiler2', label: '蒸氣鍋爐2', type: 'time_3' },
+            { id: 'gas1', label: '瓦斯1', type: 'normal' },
+            { id: 'gas2', label: '瓦斯2', type: 'normal' },
+            { id: 'water_l', label: '大支自來水', type: 'normal' },
+            { id: 'water_s', label: '小支自來水', type: 'normal' },
+            { id: 'soft_a', label: '大支軟水A', type: 'normal' },
+            { id: 'soft_ab', label: '小支軟水A/B', type: 'dual' },
+            { id: 'soft_m1', label: '軟水表1', type: 'normal' },
+            { id: 'soft_m2', label: '軟水表2', type: 'normal' },
+            { id: 'meng', label: '猛砂', type: 'normal' }
         ];
 
         let activeFieldItem = null;
@@ -225,7 +232,6 @@
             if (qrParam) {
                 const targetItem = items.find(i => i.id === qrParam);
                 if (targetItem) {
-                    // QR 模式：隱藏後台，只顯示手機填報介面
                     document.getElementById('mainNav').style.display = 'none';
                     document.getElementById('mainContainer').style.display = 'none';
                     initFieldWorkerView(targetItem);
@@ -233,16 +239,44 @@
                 }
             }
 
-            // 一般後台模式
             buildTabsAndViews();
             
-            // 提醒使用者設定 URL
             if (SCRIPT_URL === '請將您部署後的_Google_Apps_Script_網址貼在這裡') {
                 showToast('請務必在程式碼中設定您的 Google Apps Script 網址才能儲存！', 'error');
             } else {
                 fetchDataFromCloud();
             }
         };
+
+        // --- 時間計算輔助函數 ---
+        // 將 105:30 轉換為 105*60 + 30 = 6330 分鐘，方便相減
+        function timeToMins(str) {
+            if (!str || str.trim() === '') return null;
+            let s = str.toString().trim();
+            let h = 0, m = 0;
+            if (s.includes(':')) {
+                let p = s.split(':');
+                h = parseInt(p[0]) || 0;
+                m = parseInt(p[1]) || 0;
+            } else if (s.includes('.')) {
+                let p = s.split('.');
+                h = parseInt(p[0]) || 0;
+                m = parseInt(p[1]) || 0;
+            } else {
+                h = parseInt(s) || 0;
+            }
+            return h * 60 + m;
+        }
+
+        // 將 6330 分鐘 轉換回 105:30 顯示
+        function minsToTime(mins) {
+            if (mins === null || isNaN(mins)) return '-';
+            let isNeg = mins < 0;
+            mins = Math.abs(mins);
+            let h = Math.floor(mins / 60);
+            let m = Math.round(mins % 60);
+            return (isNeg ? '-' : '') + `${h}:${m.toString().padStart(2, '0')}`;
+        }
 
         async function fetchDataFromCloud() {
             if (SCRIPT_URL.includes('請將您部署後')) return;
@@ -252,7 +286,6 @@
                 const response = await fetch(SCRIPT_URL, { method: 'GET' });
                 const data = await response.json();
                 
-                // 將抓下來的資料填入輸入框
                 for (const key in data) {
                     const input = document.getElementById(key);
                     if (input && document.activeElement !== input) { 
@@ -263,7 +296,7 @@
                 showToast('✅ 雲端資料同步完成！', 'success');
             } catch (error) {
                 console.error("Fetch Error:", error);
-                showToast('❌ 讀取雲端資料失敗，請確認網路或 API 網址設定。', 'error');
+                showToast('❌ 讀取雲端資料失敗，請確認網路設定。', 'error');
             } finally {
                 hideLoading();
             }
@@ -275,7 +308,6 @@
                 return;
             }
 
-            // 收集畫面上所有輸入的資料
             const data = {};
             document.querySelectorAll('input.cell-input').forEach(input => {
                 if (input.value.trim() !== '') {
@@ -283,12 +315,11 @@
                 }
             });
 
-            if (Object.keys(data).length === 0) return; // 沒資料就不送
+            if (Object.keys(data).length === 0) return;
 
             if (showToastMsg) showLoading('儲存至雲端中...');
             
             try {
-                // 使用 text/plain 來避免 CORS 預檢請求的麻煩
                 const response = await fetch(SCRIPT_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -310,28 +341,64 @@
         function initFieldWorkerView(item) {
             activeFieldItem = item;
             document.getElementById('field-device-title').innerText = item.label;
-            document.getElementById('field-input-label').innerText = item.hasOpenClose ? '📝 輸入收 (讀數) [會自動連動隔天開]:' : '📝 輸入當日讀數:';
 
             const selectEl = document.getElementById('fieldTargetDate');
             selectEl.innerHTML = '';
             dates.forEach((dStr, idx) => {
                 selectEl.innerHTML += `<option value="${idx}">${dStr}</option>`;
             });
-            // 預設選取今天或接近今天的日期 (範例為直接選取第一天，實際情況可搭配 Date() 自動選取)
             selectEl.value = dates.length > 2 ? dates.length - 2 : 0;
+
+            const container = document.getElementById('field-inputs-container');
+            
+            if (item.type === 'time_oc') {
+                container.innerHTML = `
+                    <label class="block text-sm font-bold text-gray-700 mb-1">📝 輸入收 (時間讀數) [自動連動隔天開]:</label>
+                    <input type="text" id="fieldVal_e" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="例: 11860:46">
+                `;
+            } else if (item.type === 'time_3') {
+                container.innerHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">🔥 低燃燒 (時間讀數):</label>
+                            <input type="text" id="fieldVal_low" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="例: 100:30">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">🔥🔥 中燃燒 (時間讀數):</label>
+                            <input type="text" id="fieldVal_mid" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="例: 200:15">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">🔥🔥🔥 高燃燒 (時間讀數):</label>
+                            <input type="text" id="fieldVal_high" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="例: 300:45">
+                        </div>
+                    </div>
+                `;
+            } else if (item.type === 'dual') {
+                container.innerHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">💧 A表 (讀數):</label>
+                            <input type="number" step="0.01" id="fieldVal_a" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="A表讀數">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">💧 B表 (讀數):</label>
+                            <input type="number" step="0.01" id="fieldVal_b" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="B表讀數">
+                        </div>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <label class="block text-sm font-bold text-gray-700 mb-1">📝 輸入當日讀數:</label>
+                    <input type="number" step="0.01" id="fieldVal" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="例: 12345.67">
+                `;
+            }
 
             document.getElementById('fieldWorkerView').style.display = 'flex';
         }
 
         async function submitFieldData() {
             if (SCRIPT_URL.includes('請將您部署後')) {
-                alert('系統尚未設定 Google API 網址，無法寫入！');
-                return;
-            }
-
-            const val = document.getElementById('fieldValueInput').value.trim();
-            if (!val) {
-                alert('請輸入數值');
+                showToast('系統尚未設定 Google API 網址，無法寫入！', 'error');
                 return;
             }
 
@@ -339,18 +406,33 @@
             const item = activeFieldItem;
             const dataToSubmit = {};
 
-            if (item.hasOpenClose) {
-                // 寫入當天收
+            if (item.type === 'time_oc') {
+                const val = document.getElementById('fieldVal_e').value.trim();
+                if (!val) { showToast('請輸入數值', 'error'); return; }
                 dataToSubmit[`${item.id}_e_${dateIdx}`] = val;
-                // 自動帶入隔天開
                 if (dateIdx + 1 < dates.length) {
                     dataToSubmit[`${item.id}_s_${dateIdx + 1}`] = val;
                 }
+            } else if (item.type === 'time_3') {
+                const l = document.getElementById('fieldVal_low').value.trim();
+                const m = document.getElementById('fieldVal_mid').value.trim();
+                const h = document.getElementById('fieldVal_high').value.trim();
+                if (!l && !m && !h) { showToast('請至少填寫一個燃燒狀態', 'error'); return; }
+                if (l) dataToSubmit[`${item.id}_low_${dateIdx}`] = l;
+                if (m) dataToSubmit[`${item.id}_mid_${dateIdx}`] = m;
+                if (h) dataToSubmit[`${item.id}_high_${dateIdx}`] = h;
+            } else if (item.type === 'dual') {
+                const a = document.getElementById('fieldVal_a').value.trim();
+                const b = document.getElementById('fieldVal_b').value.trim();
+                if (!a && !b) { showToast('請至少填寫一個表', 'error'); return; }
+                if (a) dataToSubmit[`${item.id}_a_${dateIdx}`] = a;
+                if (b) dataToSubmit[`${item.id}_b_${dateIdx}`] = b;
             } else {
+                const val = document.getElementById('fieldVal').value.trim();
+                if (!val) { showToast('請輸入數值', 'error'); return; }
                 dataToSubmit[`${item.id}_${dateIdx}`] = val;
             }
 
-            // 鎖定按鈕防止重複點擊
             const btn = document.getElementById('fieldSubmitBtn');
             btn.disabled = true;
             btn.innerText = '⏳ 雲端傳輸中...';
@@ -365,13 +447,24 @@
                 
                 const result = await response.json();
                 if (result.status === 'success') {
-                    alert(`✅ [${item.label}] 數據已成功寫入雲端總表！\n辦公室端點擊「重新整理」即可看到最新數據。`);
-                    document.getElementById('fieldValueInput').value = '';
+                    showToast(`✅ [${item.label}] 數據已成功寫入雲端總表！`, 'success');
+                    
+                    // 清空輸入框
+                    if (item.type === 'time_oc') document.getElementById('fieldVal_e').value = '';
+                    else if (item.type === 'time_3') {
+                        document.getElementById('fieldVal_low').value = '';
+                        document.getElementById('fieldVal_mid').value = '';
+                        document.getElementById('fieldVal_high').value = '';
+                    } else if (item.type === 'dual') {
+                        document.getElementById('fieldVal_a').value = '';
+                        document.getElementById('fieldVal_b').value = '';
+                    } else {
+                        document.getElementById('fieldVal').value = '';
+                    }
                 }
             } catch (error) {
-                alert('❌ 傳輸失敗，請確保手機有連上網路。');
+                showToast('❌ 傳輸失敗，請確保手機有連上網路。', 'error');
             } finally {
-                // 恢復按鈕
                 btn.disabled = false;
                 btn.innerText = '✅ 確認送出寫入';
                 btn.classList.replace('bg-gray-500', 'bg-blue-600');
@@ -383,6 +476,18 @@
             const contentContainer = document.getElementById('tabsContentContainer');
             tabsContainer.innerHTML = '';
             contentContainer.innerHTML = '';
+
+            // --- 總表的動態表頭生成 ---
+            let thHtml = '<th class="col-date">日期</th>';
+            items.forEach(item => {
+                if (item.type === 'time_3') {
+                    thHtml += `<th class="col-std">${item.label}(低)</th><th class="col-std">${item.label}(中)</th><th class="col-std">${item.label}(高)</th>`;
+                } else if (item.type === 'dual') {
+                    thHtml += `<th class="col-std">${item.label}(A表)</th><th class="col-std">${item.label}(B表)</th>`;
+                } else {
+                    thHtml += `<th class="col-std">${item.label}用量</th>`;
+                }
+            });
 
             // 總表
             tabsContainer.innerHTML += `
@@ -407,10 +512,7 @@
                     <div class="table-container">
                         <table class="master-table" id="masterTable">
                             <thead>
-                                <tr>
-                                    <th class="col-date">日期</th>
-                                    ${items.map(item => `<th class="col-std">${item.label}用量</th>`).join('')}
-                                </tr>
+                                <tr>${thHtml}</tr>
                             </thead>
                             <tbody id="masterTableBody"></tbody>
                         </table>
@@ -427,6 +529,47 @@
                     </button>
                 `;
 
+                let tableHead = '';
+                let tableBody = '';
+
+                if (item.type === 'time_oc') {
+                    tableHead = `<tr><th style="width: 120px;">日期</th><th>開 (時間)</th><th>收 (時間)</th></tr>`;
+                    tableBody = dates.map((dateStr, dIdx) => `
+                        <tr>
+                            <td class="font-semibold bg-gray-50">${dateStr}</td>
+                            <td><input type="text" class="cell-input" id="${item.id}_s_${dIdx}" data-id="${item.id}_s_${dIdx}" oninput="calcMasterTable()" placeholder="例: 11801:59"></td>
+                            <td><input type="text" class="cell-input" id="${item.id}_e_${dIdx}" data-id="${item.id}_e_${dIdx}" oninput="handleCloseInput('${item.id}', ${dIdx})" placeholder="例: 11860:46"></td>
+                        </tr>
+                    `).join('');
+                } else if (item.type === 'time_3') {
+                    tableHead = `<tr><th style="width: 120px;">日期</th><th>低燃燒 (時間)</th><th>中燃燒 (時間)</th><th>高燃燒 (時間)</th></tr>`;
+                    tableBody = dates.map((dateStr, dIdx) => `
+                        <tr>
+                            <td class="font-semibold bg-gray-50">${dateStr}</td>
+                            <td><input type="text" class="cell-input" id="${item.id}_low_${dIdx}" data-id="${item.id}_low_${dIdx}" oninput="calcMasterTable()" placeholder="例: 100:30"></td>
+                            <td><input type="text" class="cell-input" id="${item.id}_mid_${dIdx}" data-id="${item.id}_mid_${dIdx}" oninput="calcMasterTable()" placeholder="例: 200:15"></td>
+                            <td><input type="text" class="cell-input" id="${item.id}_high_${dIdx}" data-id="${item.id}_high_${dIdx}" oninput="calcMasterTable()" placeholder="例: 300:45"></td>
+                        </tr>
+                    `).join('');
+                } else if (item.type === 'dual') {
+                    tableHead = `<tr><th style="width: 120px;">日期</th><th>A表 (讀數)</th><th>B表 (讀數)</th></tr>`;
+                    tableBody = dates.map((dateStr, dIdx) => `
+                        <tr>
+                            <td class="font-semibold bg-gray-50">${dateStr}</td>
+                            <td><input type="number" step="0.01" class="cell-input" id="${item.id}_a_${dIdx}" data-id="${item.id}_a_${dIdx}" oninput="calcMasterTable()" placeholder="A表"></td>
+                            <td><input type="number" step="0.01" class="cell-input" id="${item.id}_b_${dIdx}" data-id="${item.id}_b_${dIdx}" oninput="calcMasterTable()" placeholder="B表"></td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tableHead = `<tr><th style="width: 120px;">日期</th><th>當日讀數</th></tr>`;
+                    tableBody = dates.map((dateStr, dIdx) => `
+                        <tr>
+                            <td class="font-semibold bg-gray-50">${dateStr}</td>
+                            <td><input type="number" step="0.01" class="cell-input" id="${item.id}_${dIdx}" data-id="${item.id}_${dIdx}" oninput="calcMasterTable()" placeholder="輸入度數"></td>
+                        </tr>
+                    `).join('');
+                }
+
                 contentContainer.innerHTML += `
                     <div id="${tabId}" class="tab-content bg-white p-4 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0">
                         <div class="flex justify-between items-center mb-4">
@@ -437,32 +580,8 @@
                         </div>
                         <div class="table-container">
                             <table class="fixed-table">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 120px;">日期</th>
-                                        ${item.hasOpenClose ? '<th>開 (讀數)</th><th>收 (讀數)</th>' : '<th>當日讀數</th>'}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${dates.map((dateStr, dIdx) => {
-                                        if (item.hasOpenClose) {
-                                            return `
-                                                <tr>
-                                                    <td class="font-semibold bg-gray-50">${dateStr}</td>
-                                                    <td><input type="number" step="0.01" class="cell-input" id="${item.id}_s_${dIdx}" data-id="${item.id}_s_${dIdx}" oninput="calcMasterTable()" placeholder="例: 11801.59"></td>
-                                                    <td><input type="number" step="0.01" class="cell-input" id="${item.id}_e_${dIdx}" data-id="${item.id}_e_${dIdx}" oninput="handleCloseInput('${item.id}', ${dIdx})" placeholder="例: 11860.46"></td>
-                                                </tr>
-                                            `;
-                                        } else {
-                                            return `
-                                                <tr>
-                                                    <td class="font-semibold bg-gray-50">${dateStr}</td>
-                                                    <td><input type="number" step="0.01" class="cell-input" id="${item.id}_${dIdx}" data-id="${item.id}_${dIdx}" oninput="calcMasterTable()" placeholder="輸入度數"></td>
-                                                </tr>
-                                            `;
-                                        }
-                                    }).join('')}
-                                </tbody>
+                                <thead>${tableHead}</thead>
+                                <tbody>${tableBody}</tbody>
                             </table>
                         </div>
                     </div>
@@ -494,6 +613,30 @@
             calcMasterTable();
         }
 
+        // --- 核心計算：處理當日與昨日相減，或是時間相減 ---
+        function calcUsage(baseId, dIdx, isTime) {
+            let currStr = document.getElementById(`${baseId}_${dIdx}`)?.value;
+            if (!currStr) return '-';
+
+            if (dIdx === 0) {
+                return isTime ? '-' : parseFloat(currStr).toFixed(2);
+            }
+
+            let prevStr = document.getElementById(`${baseId}_${dIdx - 1}`)?.value;
+            if (!prevStr) return '-';
+
+            if (isTime) {
+                let currMins = timeToMins(currStr);
+                let prevMins = timeToMins(prevStr);
+                if (currMins !== null && prevMins !== null) return minsToTime(currMins - prevMins);
+            } else {
+                let currNum = parseFloat(currStr);
+                let prevNum = parseFloat(prevStr);
+                if (!isNaN(currNum) && !isNaN(prevNum)) return (currNum - prevNum).toFixed(2);
+            }
+            return '-';
+        }
+
         function calcMasterTable() {
             const tbody = document.getElementById('masterTableBody');
             if (!tbody) return;
@@ -502,33 +645,28 @@
             dates.forEach((dateStr, dIdx) => {
                 let rowHtml = `<tr><td class="col-date">${dateStr}</td>`;
                 items.forEach(item => {
-                    let usageVal = '-';
-                    if (item.hasOpenClose) {
-                        const openStr = document.getElementById(`${item.id}_s_${dIdx}`)?.value || '';
-                        const closeStr = document.getElementById(`${item.id}_e_${dIdx}`)?.value || '';
-                        
-                        const openNum = parseFloat(openStr);
-                        const closeNum = parseFloat(closeStr);
-
-                        if (!isNaN(openNum) && !isNaN(closeNum)) {
-                            usageVal = (closeNum - openNum).toFixed(2);
-                            if (usageVal < 0) usageVal = '-';
-                        }
+                    if (item.type === 'time_oc') {
+                        const openVal = timeToMins(document.getElementById(`${item.id}_s_${dIdx}`)?.value);
+                        const closeVal = timeToMins(document.getElementById(`${item.id}_e_${dIdx}`)?.value);
+                        let usage = '-';
+                        if (openVal !== null && closeVal !== null) usage = minsToTime(closeVal - openVal);
+                        rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
+                    } else if (item.type === 'time_3') {
+                        const low = calcUsage(item.id + '_low', dIdx, true);
+                        const mid = calcUsage(item.id + '_mid', dIdx, true);
+                        const high = calcUsage(item.id + '_high', dIdx, true);
+                        rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${low}</td>
+                                    <td class="col-std font-bold text-blue-600 bg-blue-50/50">${mid}</td>
+                                    <td class="col-std font-bold text-blue-600 bg-blue-50/50">${high}</td>`;
+                    } else if (item.type === 'dual') {
+                        const a = calcUsage(item.id + '_a', dIdx, false);
+                        const b = calcUsage(item.id + '_b', dIdx, false);
+                        rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${a}</td>
+                                    <td class="col-std font-bold text-blue-600 bg-blue-50/50">${b}</td>`;
                     } else {
-                        const currStr = document.getElementById(`${item.id}_${dIdx}`)?.value || '';
-                        const currNum = parseFloat(currStr);
-                        
-                        if (!isNaN(currNum) && dIdx > 0) {
-                            const prevStr = document.getElementById(`${item.id}_${dIdx - 1}`)?.value || '';
-                            const prevNum = parseFloat(prevStr);
-                            if (!isNaN(prevNum)) {
-                                usageVal = (currNum - prevNum).toFixed(2);
-                            }
-                        } else if (!isNaN(currNum) && dIdx === 0) {
-                            usageVal = currNum.toFixed(2);
-                        }
+                        const usage = calcUsage(item.id, dIdx, false);
+                        rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
                     }
-                    rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usageVal}</td>`;
                 });
                 rowHtml += `</tr>`;
                 tbody.innerHTML += rowHtml;
