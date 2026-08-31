@@ -77,7 +77,6 @@
             font-weight: 800 !important; font-size: 14px; z-index: 10; padding: 10px 4px;
         }
 
-        /* 總表專用樣式 */
         table.master-table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
         table.master-table th, table.master-table td {
             border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1;
@@ -100,9 +99,7 @@
         }
         input.cell-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2); background-color: #eff6ff; }
 
-        #toast-container {
-            position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;
-        }
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
         .toast {
             background-color: #333; color: white; padding: 12px 24px; border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px;
@@ -113,15 +110,28 @@
         .toast.error { background-color: #ef4444; }
         .toast.loading { background-color: #3b82f6; }
 
-        #loading-overlay {
-            position: fixed; inset: 0; background: rgba(255,255,255,0.8); z-index: 9998;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-        }
-        .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1); border-left-color: #2563eb;
-            border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;
-        }
+        #loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.8); z-index: 9998; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .spinner { border: 4px solid rgba(0, 0, 0, 0.1); border-left-color: #2563eb; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* 🖨️ 列印專屬樣式設定 */
+        @media print {
+            body { background-color: white; }
+            nav, #mainContainer, #toast-container { display: none !important; }
+            
+            #qrModal { 
+                position: relative !important; display: block !important; 
+                background: white !important; backdrop-filter: none !important; padding: 0 !important;
+            }
+            #qrModal > div { box-shadow: none !important; max-width: 100% !important; max-height: none !important; padding: 0 !important; }
+            
+            #qrPrintArea { 
+                border: none !important; background: white !important; overflow: visible !important; 
+                display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 20px;
+            }
+            .print-hide { display: none !important; }
+            #qrPrintArea > div { page-break-inside: avoid; border: 2px dashed #ccc; }
+        }
     </style>
 </head>
 <body class="text-gray-800">
@@ -158,25 +168,39 @@
         <div id="tabsContentContainer"></div>
     </div>
 
+    <!-- 現場填報專用畫面 -->
     <div id="fieldWorkerView" class="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center p-4" style="display: none;">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md text-center">
             <div class="bg-blue-600 p-4 rounded-xl text-white mb-6">
                 <h2 class="text-2xl font-bold" id="field-device-title">載入中...</h2>
                 <p class="text-sm text-blue-100 mt-1">現場數據雲端直傳</p>
             </div>
-            
             <div class="mb-4 text-left">
                 <label class="block text-sm font-bold text-gray-700 mb-1">📅 選擇填報日期：</label>
-                <select id="fieldTargetDate" class="w-full p-3 rounded-lg border border-gray-300 font-semibold bg-gray-50 text-base">
-                </select>
+                <select id="fieldTargetDate" class="w-full p-3 rounded-lg border border-gray-300 font-semibold bg-gray-50 text-base"></select>
             </div>
-
-            <div id="field-inputs-container" class="mb-6 text-left">
-            </div>
-
+            <div id="field-inputs-container" class="mb-6 text-left"></div>
             <button id="fieldSubmitBtn" onclick="submitFieldData()" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg shadow-lg mb-2 transition-colors">
                 ✅ 確認送出寫入
             </button>
+        </div>
+    </div>
+
+    <!-- 🖨️ QR Code 產生器彈跳視窗 -->
+    <div id="qrModal" class="fixed inset-0 bg-black/60 z-[100] hidden flex-col items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl p-6 relative flex flex-col max-h-[90vh]">
+            <button onclick="closeQrModal()" class="print-hide absolute top-4 right-4 text-gray-400 hover:text-gray-800 text-3xl font-bold">&times;</button>
+            <div class="print-hide flex justify-between items-center mb-6 border-b pb-4">
+                <h2 class="text-2xl font-bold text-gray-800">🖨️ 設備 QR Code 列印清單</h2>
+                <button onclick="window.print()" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700">
+                    開始列印 (A4)
+                </button>
+            </div>
+            <p class="print-hide text-sm text-gray-500 mb-4">系統已自動為每個設備建立專屬 QR Code，列印後裁切即可貼在現場。</p>
+            
+            <div id="qrPrintArea" class="grid grid-cols-2 md:grid-cols-3 gap-6 overflow-y-auto p-4 bg-gray-50 rounded-lg">
+                <!-- QR Codes 會透過 JavaScript 動態生成注入這裡 -->
+            </div>
         </div>
     </div>
 
@@ -192,6 +216,7 @@
             dates.push(`08/${dayStr} (${wday})`);
         }
 
+        // 📝 設備清單 (瓦斯已分開，軟水A/B已合併)
         const items = [
             { id: 'boiler1', label: '蒸氣高燃鍋爐', type: 'time_oc' },
             { id: 'boiler2', label: '蒸氣鍋爐2', type: 'time_3' },
@@ -228,14 +253,47 @@
             }
         };
 
-        // 🌟 新增功能：將超過 60 分鐘的小數自動換算 (乘0.6進位)
+        // --- 🖨️ QR Code 列印相關函式 ---
+        function openQrModal() {
+            const printArea = document.getElementById('qrPrintArea');
+            printArea.innerHTML = '';
+            
+            // 抓取目前的純淨網址 (移除 ?qr=xxx 後的參數)
+            const baseUrl = window.location.href.split('?')[0];
+
+            items.forEach(item => {
+                const targetUrl = `${baseUrl}?qr=${item.id}`;
+                // 使用 api.qrserver.com 產生 QR Code 圖片
+                const qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(targetUrl)}`;
+                
+                printArea.innerHTML += `
+                    <div class="flex flex-col items-center bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">${item.label}</h3>
+                        <img src="${qrImgSrc}" alt="${item.label} QR Code" class="w-40 h-40 object-contain mb-3 border p-1">
+                        <p class="text-xs text-gray-400 break-all w-full text-center truncate">掃描即開啟填報畫面</p>
+                    </div>
+                `;
+            });
+            
+            const modal = document.getElementById('qrModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeQrModal() {
+            const modal = document.getElementById('qrModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+
+        // 🌟 超過 60 分鐘的小數自動換算 (乘0.6進位)
         function autoFormatTime(str) {
             if (!str || !str.includes(':')) return str;
             const parts = str.split(':');
             const hrs = parts[0];
             const mins = parseInt(parts[1], 10);
             
-            // 若冒號後面 >= 60，就自動 x0.6 並無條件進位
             if (!isNaN(mins) && mins >= 60) {
                 const newMins = Math.ceil(mins * 0.6);
                 return `${hrs}:${newMins.toString().padStart(2, '0')}`;
@@ -376,7 +434,6 @@
                     <input type="number" step="0.01" id="fieldVal" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="例: 12345.67">
                 `;
             }
-
             document.getElementById('fieldWorkerView').style.display = 'flex';
         }
 
@@ -390,7 +447,6 @@
             const dataToSubmit = {};
 
             if (item.type === 'time_oc') {
-                // 送出前自動格式化時間
                 let val = document.getElementById('fieldVal_e').value.trim();
                 if (!val) { showToast('請輸入數值', 'error'); return; }
                 val = autoFormatTime(val); 
@@ -460,18 +516,18 @@
             contentContainer.innerHTML = '';
 
             let thHtml = '<th class="col-date">日期</th>';
-            items.forEach(item => {
-                thHtml += `<th class="col-std">${item.label}用量</th>`;
-            });
+            items.forEach(item => { thHtml += `<th class="col-std">${item.label}用量</th>`; });
 
             tabsContainer.innerHTML += `<button onclick="switchTab('tab-master')" id="btn-tab-master" class="nav-tab active">📊 8/1-8/31 用量總表</button>`;
 
+            // 總表介面，加入 QR Code 按鈕
             contentContainer.innerHTML += `
                 <div id="tab-master" class="tab-content active bg-white p-4 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0">
                     <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
                         <h2 class="text-xl font-bold text-gray-700">📅 115年8月份設備用量總結算表 (雲端同步版)</h2>
                         <div class="flex flex-wrap gap-2">
                             <button onclick="syncDataToCloud()" id="saveBtn" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">☁️ 儲存至試算表</button>
+                            <button onclick="openQrModal()" class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">🖨️ 列印 QR Code</button>
                             <button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">📸 截圖傳送</button>
                         </div>
                     </div>
@@ -491,7 +547,6 @@
                 let tableHead = '';
                 let tableBody = '';
 
-                // 🌟 加入 onblur 自動換算機制：在總表輸入完滑鼠點旁邊，立刻換算！
                 if (item.type === 'time_oc') {
                     tableHead = `<tr><th style="width: 120px;">日期</th><th>開 (時間)</th><th>收 (時間)</th></tr>`;
                     tableBody = dates.map((dateStr, dIdx) => `
@@ -588,7 +643,6 @@
             return null;
         }
         
-        // 🌟 新增功能：計算軟水表 12噸換桶邏輯 (不允許負數)
         function getTankUsage(currStr, nextStr) {
             if (!currStr || currStr.trim() === '' || !nextStr || nextStr.trim() === '') return null;
             let c = parseFloat(currStr);
@@ -596,15 +650,8 @@
             if (isNaN(c) || isNaN(n)) return null;
             
             let usage = 0;
-            if (c >= n) {
-                // 正常扣除：今天大於明天
-                usage = c - n;
-            } else {
-                // 換新桶：明天反而比今天多，代表中間換了一桶 12 噸的
-                // 把舊桶剩下的用完 (c) + 新桶用掉的 (12 - n)
-                usage = c + (12 - n);
-            }
-            // 絕不出現負數防呆機制
+            if (c >= n) usage = c - n;
+            else usage = c + (12 - n);
             return Math.max(0, usage);
         }
 
@@ -695,7 +742,6 @@
             document.getElementById('loading-text').innerText = text;
             document.getElementById('loading-overlay').style.display = 'flex';
         }
-
         function hideLoading() {
             document.getElementById('loading-overlay').style.display = 'none';
         }
