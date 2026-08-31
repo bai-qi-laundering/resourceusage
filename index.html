@@ -191,7 +191,6 @@
         <div id="tabsContentContainer"></div>
     </div>
 
-    <!-- 現場填報專用畫面 -->
     <div id="fieldWorkerView" class="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center p-4" style="display: none;">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md text-center">
             <div class="bg-blue-600 p-4 rounded-xl text-white mb-6">
@@ -209,7 +208,6 @@
         </div>
     </div>
 
-    <!-- 🖨️ QR Code 產生器彈跳視窗 -->
     <div id="qrModal" class="fixed inset-0 bg-black/60 z-[100] hidden flex-col items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl p-6 relative flex flex-col max-h-[90vh]">
             <button onclick="closeQrModal()" class="print-hide absolute top-4 right-4 text-gray-400 hover:text-gray-800 text-3xl font-bold">&times;</button>
@@ -227,16 +225,14 @@
     </div>
 
     <script>
-        // ⚠️ 請替換為您部署的 Google Apps Script 網址 ⚠️
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwfzOoGGdXKa1qY9jOi0H4D5DcR6wJ0Af8yaw6qvNS0TKqtD0AHa1UQ92ib_sAqUweqiQ/exec'; 
 
-        // 🌟 自動抓取「現在這個月」有幾天，永遠不用手動更新了！
         const dates = [];
         const today = new Date();
         const currentYear = today.getFullYear() - 1911; // 轉為民國年 (115)
         const currentMonth = today.getMonth() + 1; // 1~12
         
-        // 取得當月最後一天 (如果是 8 月就會拿到 31，9 月拿到 30)
+        // 取得當月最後一天
         const daysInMonth = new Date(today.getFullYear(), currentMonth, 0).getDate();
         
         for (let d = 1; d <= daysInMonth; d++) {
@@ -318,7 +314,6 @@
             modal.classList.remove('flex');
         }
 
-        // 🌟 超過 60 分無條件進位計算邏輯
         function autoFormatTime(str) {
             // 如果輸入的格式不是用冒號，就直接回傳原本的值
             if (!str || !str.includes(':')) return str;
@@ -332,13 +327,13 @@
             const mins = parseInt(parts[1], 10);
             
             if (!isNaN(mins) && mins >= 60) {
-                // 這裡就是您要求的 *0.6 並且無條件進位 (Math.ceil)
                 const newMins = Math.ceil(mins * 0.6);
                 return `${hrs}:${newMins.toString().padStart(2, '0')}`;
             }
             return cleanStr;
         }
 
+        // 把 "時:分" 全部打散成 "純分鐘數" (完美處理 60 進位準備)
         function timeToMins(str) {
             if (!str || str.toString().trim() === '' || str.includes('跑位')) return null;
             let s = str.toString().trim();
@@ -360,6 +355,7 @@
             return h * 60 + m;
         }
 
+        // 把算完的 "總分鐘數" 精準進位回 "小時:分鐘" (例如 135分 -> 2:15)
         function minsToTime(mins) {
             if (mins === null || isNaN(mins)) return '-';
             let isNeg = mins < 0;
@@ -383,7 +379,7 @@
                         // 移除保護單引號
                         if (val.startsWith("'")) val = val.substring(1);
                         
-                        // 🌟 防護機制：若舊資料被 Google 擅自變成了 1901-05-07 這類日期，直接顯示格式錯誤
+                        // 防護機制：若舊資料被 Google 變成 1901-05-07，直接顯示錯誤請重新輸入
                         if (val.match(/^\d{4}-\d{2}-\d{2}/) || val.includes('1899') || val.includes('1901')) {
                             val = "格式跑位(請重填)";
                         }
@@ -406,7 +402,7 @@
             document.querySelectorAll('input.cell-input').forEach(input => {
                 if (input.value.trim() !== '' && !input.value.includes('跑位')) {
                     let v = input.value.trim();
-                    // 🌟 防護機制：只要裡面有冒號，存入 Google 時前面強制加一個單引號，防止它變成日期
+                    // 強制套上防護單引號，徹底杜絕 Google 變形 BUG
                     if (v.includes(':') && !v.startsWith("'")) v = "'" + v;
                     data[input.getAttribute('data-id')] = v;
                 }
@@ -508,7 +504,7 @@
                 if (!val) { showToast('請輸入數值', 'error'); return; }
                 val = autoFormatTime(val); 
                 
-                // 存入前強制加單引號保護
+                // 強制套上防護單引號，徹底杜絕 Google 變形 BUG
                 const protectedVal = val.includes(':') ? "'" + val : val;
                 
                 dataToSubmit[`${item.id}_e_${dateIdx}`] = protectedVal;
@@ -520,6 +516,7 @@
                 let h = autoFormatTime(document.getElementById('fieldVal_high').value.trim());
                 if (!l && !m && !h) { showToast('請至少填寫一個燃燒狀態', 'error'); return; }
                 
+                // 強制套上防護單引號
                 if (l) dataToSubmit[`${item.id}_low_${dateIdx}`] = l.includes(':') ? "'" + l : l;
                 if (m) dataToSubmit[`${item.id}_mid_${dateIdx}`] = m.includes(':') ? "'" + m : m;
                 if (h) dataToSubmit[`${item.id}_high_${dateIdx}`] = h.includes(':') ? "'" + h : h;
@@ -530,6 +527,7 @@
                 if (!a && !b) { showToast('請至少填寫一個表', 'error'); return; }
                 if (a) dataToSubmit[`${item.id}_a_${dateIdx}`] = a;
                 if (b) dataToSubmit[`${item.id}_b_${dateIdx}`] = b;
+                
             } else {
                 const val = document.getElementById('fieldVal').value.trim();
                 if (!val) { showToast('請輸入數值', 'error'); return; }
@@ -688,6 +686,7 @@
             let currStr = document.getElementById(`${baseId}_${dIdx}`)?.value;
             if (!currStr || currStr.includes('跑位')) return null;
             if (dIdx === 0) return isTime ? null : parseFloat(currStr);
+            
             let prevStr = document.getElementById(`${baseId}_${dIdx - 1}`)?.value;
             if (!prevStr || prevStr.includes('跑位')) return null;
 
@@ -731,11 +730,16 @@
                         rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
                         
                     } else if (item.type === 'time_3') {
+                        // 🌟 【鍋爐 2 的完美進位數學核心】
+                        // 在這裡，會先把低、中、高的讀數各自扣除昨日，算出各自的「分鐘差值」
+                        // 接著將這三個分鐘加起來成為 totalMins
                         let totalMins = null;
                         ['low', 'mid', 'high'].forEach(state => {
                             let diff = getRawUsage(`${item.id}_${state}`, dIdx, true);
                             if (diff !== null) totalMins = (totalMins || 0) + diff;
                         });
+                        
+                        // 然後交給 minsToTime，它會把這個純分鐘除以 60，完美進位成小時，餘數放分號後面！
                         let usage = totalMins !== null ? minsToTime(totalMins) : '-';
                         rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
                         
@@ -806,22 +810,21 @@
             document.getElementById('loading-overlay').style.display = 'none';
         }
 
-        // 🌟 修復截圖範圍：確保截取整個表格 (移除滾動條的遮擋)
         async function takeScreenshot() {
             switchTab('tab-master');
             showToast('正在產生完整總表截圖，請稍候...', 'loading');
             
             try {
-                // 等待畫面渲染
+                // 等待畫面渲染切換完畢
                 await new Promise(resolve => setTimeout(resolve, 500));
                 
-                // 1. 強制攤開表格
+                // 套用截圖專屬 CSS，瞬間強制將表格「完全攤開」無死角
                 document.body.classList.add('capturing');
                 const targetEl = document.querySelector('#tab-master');
                 
-                // 2. 截圖
+                // 確保 html2canvas 抓取整個撐開的寬高
                 const canvas = await html2canvas(targetEl, { 
-                    scale: 2, // 提高解析度
+                    scale: 2, 
                     backgroundColor: '#ffffff',
                     width: targetEl.scrollWidth,
                     height: targetEl.scrollHeight,
@@ -829,7 +832,7 @@
                     windowHeight: targetEl.scrollHeight
                 });
                 
-                // 3. 恢復原狀
+                // 截圖完成，立刻卸除 CSS 恢復原狀
                 document.body.classList.remove('capturing');
                 
                 canvas.toBlob(async (blob) => {
@@ -849,7 +852,7 @@
                                 showToast('❌ 分享失敗，改為直接下載', 'error');
                                 downloadFallback(blob, fileName);
                             } else {
-                                hideLoading();
+                                hideLoading(); 
                             }
                         }
                     } else {
@@ -859,7 +862,7 @@
                 }, 'image/jpeg', 0.9);
                 
             } catch (error) {
-                document.body.classList.remove('capturing'); // 確保發生錯誤也會恢復畫面
+                document.body.classList.remove('capturing');
                 showToast('❌ 截圖發生錯誤', 'error');
                 hideLoading();
             }
