@@ -52,7 +52,7 @@
             box-shadow: 0 -2px 4px rgba(0,0,0,0.05);
         }
 
-        /* 🌟 修改點：移除總表的高度限制，讓它完全展開以便截圖 */
+        /* 🌟 移除總表的高度限制，讓它完全展開以便截圖 */
         .table-container {
             overflow-x: auto;
             background: white;
@@ -120,6 +120,24 @@
         .spinner { border: 4px solid rgba(0, 0, 0, 0.1); border-left-color: #2563eb; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+        /* 📸 截圖專用樣式：強制展開所有隱藏範圍 */
+        body.capturing { overflow: visible !important; }
+        body.capturing #mainContainer, 
+        body.capturing #tab-master, 
+        body.capturing .table-container {
+            width: max-content !important;
+            max-width: none !important;
+            overflow: visible !important;
+            max-height: none !important;
+            height: auto !important;
+        }
+        body.capturing .print-hide { display: none !important; } /* 隱藏按鈕，讓報表更乾淨 */
+        body.capturing table.master-table th,
+        body.capturing table.master-table td {
+            position: static !important; /* 解除固定標題，防止截圖破版 */
+        }
+
+        /* 🖨️ 列印專屬樣式設定 */
         @media print {
             body { background-color: white; }
             nav, #mainContainer, #toast-container { display: none !important; }
@@ -173,6 +191,7 @@
         <div id="tabsContentContainer"></div>
     </div>
 
+    <!-- 現場填報專用畫面 -->
     <div id="fieldWorkerView" class="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center p-4" style="display: none;">
         <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md text-center">
             <div class="bg-blue-600 p-4 rounded-xl text-white mb-6">
@@ -190,6 +209,7 @@
         </div>
     </div>
 
+    <!-- 🖨️ QR Code 產生器彈跳視窗 -->
     <div id="qrModal" class="fixed inset-0 bg-black/60 z-[100] hidden flex-col items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl p-6 relative flex flex-col max-h-[90vh]">
             <button onclick="closeQrModal()" class="print-hide absolute top-4 right-4 text-gray-400 hover:text-gray-800 text-3xl font-bold">&times;</button>
@@ -207,15 +227,16 @@
     </div>
 
     <script>
+        // ⚠️ 請替換為您部署的 Google Apps Script 網址 ⚠️
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwfzOoGGdXKa1qY9jOi0H4D5DcR6wJ0Af8yaw6qvNS0TKqtD0AHa1UQ92ib_sAqUweqiQ/exec'; 
 
-        // 🌟 核心修改：動態產生月份日期
+        // 🌟 自動抓取「現在這個月」有幾天，永遠不用手動更新了！
         const dates = [];
         const today = new Date();
         const currentYear = today.getFullYear() - 1911; // 轉為民國年 (115)
         const currentMonth = today.getMonth() + 1; // 1~12
         
-        // 取得當月最後一天
+        // 取得當月最後一天 (如果是 8 月就會拿到 31，9 月拿到 30)
         const daysInMonth = new Date(today.getFullYear(), currentMonth, 0).getDate();
         
         for (let d = 1; d <= daysInMonth; d++) {
@@ -297,21 +318,33 @@
             modal.classList.remove('flex');
         }
 
+        // 🌟 超過 60 分無條件進位計算邏輯
         function autoFormatTime(str) {
+            // 如果輸入的格式不是用冒號，就直接回傳原本的值
             if (!str || !str.includes(':')) return str;
-            const parts = str.split(':');
+            
+            // 處理被單引號保護的字串
+            let cleanStr = str;
+            if (cleanStr.startsWith("'")) cleanStr = cleanStr.substring(1);
+            
+            const parts = cleanStr.split(':');
             const hrs = parts[0];
             const mins = parseInt(parts[1], 10);
+            
             if (!isNaN(mins) && mins >= 60) {
+                // 這裡就是您要求的 *0.6 並且無條件進位 (Math.ceil)
                 const newMins = Math.ceil(mins * 0.6);
                 return `${hrs}:${newMins.toString().padStart(2, '0')}`;
             }
-            return str;
+            return cleanStr;
         }
 
         function timeToMins(str) {
-            if (!str || str.trim() === '') return null;
+            if (!str || str.toString().trim() === '') return null;
             let s = str.toString().trim();
+            // 移除保護用的單引號
+            if (s.startsWith("'")) s = s.substring(1);
+            
             let h = 0, m = 0;
             if (s.includes(':')) {
                 let p = s.split(':');
@@ -346,7 +379,16 @@
                 for (const key in data) {
                     const input = document.getElementById(key);
                     if (input && document.activeElement !== input) { 
-                        input.value = data[key];
+                        let val = String(data[key]);
+                        // 移除保護單引號
+                        if (val.startsWith("'")) val = val.substring(1);
+                        
+                        // 🌟 防護機制：若舊資料被 Google 擅自變成了 1901-05-07 這類日期，直接顯示格式錯誤
+                        if (val.match(/^\d{4}-\d{2}-\d{2}/)) {
+                            val = "格式跑位(請重填)";
+                        }
+                        
+                        input.value = val;
                     }
                 }
                 calcMasterTable();
@@ -362,8 +404,14 @@
             if (SCRIPT_URL.includes('請將您部署後')) return;
             const data = {};
             document.querySelectorAll('input.cell-input').forEach(input => {
-                if (input.value.trim() !== '') data[input.getAttribute('data-id')] = input.value;
+                if (input.value.trim() !== '') {
+                    let v = input.value.trim();
+                    // 🌟 防護機制：只要裡面有冒號，存入 Google 時前面強制加一個單引號，防止它變成日期
+                    if (v.includes(':') && !v.startsWith("'")) v = "'" + v;
+                    data[input.getAttribute('data-id')] = v;
+                }
             });
+            
             if (Object.keys(data).length === 0) return;
             if (showToastMsg) showLoading('儲存至雲端中...');
             try {
@@ -459,16 +507,23 @@
                 let val = document.getElementById('fieldVal_e').value.trim();
                 if (!val) { showToast('請輸入數值', 'error'); return; }
                 val = autoFormatTime(val); 
-                dataToSubmit[`${item.id}_e_${dateIdx}`] = val;
-                if (dateIdx + 1 < dates.length) dataToSubmit[`${item.id}_s_${dateIdx + 1}`] = val;
+                
+                // 存入前強制加單引號保護
+                const protectedVal = val.includes(':') ? "'" + val : val;
+                
+                dataToSubmit[`${item.id}_e_${dateIdx}`] = protectedVal;
+                if (dateIdx + 1 < dates.length) dataToSubmit[`${item.id}_s_${dateIdx + 1}`] = protectedVal;
+                
             } else if (item.type === 'time_3') {
                 let l = autoFormatTime(document.getElementById('fieldVal_low').value.trim());
                 let m = autoFormatTime(document.getElementById('fieldVal_mid').value.trim());
                 let h = autoFormatTime(document.getElementById('fieldVal_high').value.trim());
                 if (!l && !m && !h) { showToast('請至少填寫一個燃燒狀態', 'error'); return; }
-                if (l) dataToSubmit[`${item.id}_low_${dateIdx}`] = l;
-                if (m) dataToSubmit[`${item.id}_mid_${dateIdx}`] = m;
-                if (h) dataToSubmit[`${item.id}_high_${dateIdx}`] = h;
+                
+                if (l) dataToSubmit[`${item.id}_low_${dateIdx}`] = l.includes(':') ? "'" + l : l;
+                if (m) dataToSubmit[`${item.id}_mid_${dateIdx}`] = m.includes(':') ? "'" + m : m;
+                if (h) dataToSubmit[`${item.id}_high_${dateIdx}`] = h.includes(':') ? "'" + h : h;
+                
             } else if (item.type === 'dual') {
                 const a = document.getElementById('fieldVal_a').value.trim();
                 const b = document.getElementById('fieldVal_b').value.trim();
@@ -751,38 +806,37 @@
             document.getElementById('loading-overlay').style.display = 'none';
         }
 
-        // 🌟 修復截圖範圍：確保截取整個表格 (移除滾動條的遮擋)
+        // 🌟 截圖全範圍修復機制
         async function takeScreenshot() {
             switchTab('tab-master');
             showToast('正在產生完整總表截圖，請稍候...', 'loading');
             
             try {
-                // 等待畫面渲染
+                // 等待畫面切換渲染
                 await new Promise(resolve => setTimeout(resolve, 500));
                 
-                const tableContainer = document.getElementById('masterTableContainer');
+                // 1. 強制攤開表格
+                document.body.classList.add('capturing');
+                const targetEl = document.querySelector('#tab-master');
                 
-                // 暫時解除高度限制以獲取完整內容
-                const originalMaxHeight = tableContainer.style.maxHeight;
-                const originalOverflow = tableContainer.style.overflow;
-                tableContainer.style.maxHeight = 'none';
-                tableContainer.style.overflow = 'visible';
-                
-                const canvas = await html2canvas(document.querySelector('#tab-master'), { 
-                    scale: 2, // 提高清晰度
+                // 2. 截圖
+                const canvas = await html2canvas(targetEl, { 
+                    scale: 2, // 提高解析度
                     backgroundColor: '#ffffff',
-                    windowWidth: document.querySelector('#tab-master').scrollWidth,
-                    windowHeight: document.querySelector('#tab-master').scrollHeight
+                    width: targetEl.scrollWidth,
+                    height: targetEl.scrollHeight,
+                    windowWidth: targetEl.scrollWidth,
+                    windowHeight: targetEl.scrollHeight
                 });
                 
-                // 恢復原本樣式
-                tableContainer.style.maxHeight = originalMaxHeight;
-                tableContainer.style.overflow = originalOverflow;
+                // 3. 恢復原狀
+                document.body.classList.remove('capturing');
                 
                 canvas.toBlob(async (blob) => {
                     const fileName = `${titleText}設備用量總結算表.jpg`;
                     const file = new File([blob], fileName, { type: 'image/jpeg' });
                     
+                    // 手機原生分享
                     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
                         try {
                             await navigator.share({
@@ -800,12 +854,14 @@
                             }
                         }
                     } else {
-                        showToast('📥 裝置不支援分享，改為自動下載', 'success');
+                        // 電腦版或不支援分享的裝置
+                        showToast('📥 您的裝置不支援直接分享，改為自動下載', 'success');
                         downloadFallback(blob, fileName);
                     }
-                }, 'image/jpeg', 0.9);
+                }, 'image/jpeg', 0.85); 
                 
             } catch (error) {
+                document.body.classList.remove('capturing'); // 確保出錯也會恢復
                 showToast('❌ 截圖發生錯誤', 'error');
                 hideLoading();
             }
