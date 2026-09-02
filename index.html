@@ -52,18 +52,16 @@
             box-shadow: 0 -2px 4px rgba(0,0,0,0.05);
         }
 
+        /* 🌟 恢復高度限制並設定表頭凍結 */
         .table-container {
-            overflow-x: auto;
+            max-height: calc(100vh - 240px);
+            overflow: auto;
             background: white;
             border-radius: 0 8px 8px 8px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             border: 1px solid #cbd5e1;
             border-top: none;
-        }
-        
-        .tab-content:not(#tab-master) .table-container {
-            max-height: calc(100vh - 240px);
-            overflow-y: auto;
+            position: relative; 
         }
 
         table.fixed-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -76,9 +74,12 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+        
+        /* ❄️ 凍結分頁表頭 */
         table.fixed-table th {
             position: sticky; top: 0; background-color: #bfdbfe; color: #1e3a8a !important;
             font-weight: 800 !important; font-size: 14px; z-index: 10; padding: 10px 4px;
+            box-shadow: inset 0 -1px 0 #cbd5e1; 
         }
 
         table.master-table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
@@ -86,15 +87,23 @@
             border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1;
             text-align: center; vertical-align: middle; padding: 4px; box-sizing: border-box;
         }
+        
+        /* ❄️ 凍結總表表頭 */
         table.master-table th {
             position: sticky; top: 0; background-color: #bfdbfe; color: #1e3a8a !important;
             font-weight: 800 !important; font-size: 13px; z-index: 10; white-space: nowrap; padding: 10px 4px;
+            box-shadow: inset 0 -1px 0 #cbd5e1;
         }
+        
+        /* ❄️ 凍結總表第一列 (日期) */
         table.master-table th.col-date, table.master-table td.col-date {
             width: 110px; min-width: 110px; max-width: 110px; position: sticky; left: 0;
             background-color: #f1f5f9; z-index: 5; font-weight: 600;
         }
-        table.master-table th.col-date { z-index: 15; background-color: #93c5fd; }
+        table.master-table th.col-date { 
+            z-index: 15; 
+            background-color: #93c5fd; 
+        }
         table.master-table .col-std { width: 90px; min-width: 90px; max-width: 90px; }
 
         input.cell-input {
@@ -118,19 +127,15 @@
         .spinner { border: 4px solid rgba(0, 0, 0, 0.1); border-left-color: #2563eb; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        body.capturing { overflow: visible !important; }
-        body.capturing #mainContainer, 
-        body.capturing #tab-master, 
-        body.capturing .table-container {
-            width: max-content !important;
-            max-width: none !important;
-            overflow: visible !important;
-            max-height: none !important;
-            height: auto !important;
-        }
+        /* 📸 截圖時隱藏不需要的列與解除凍結 */
         body.capturing .print-hide { display: none !important; }
-        body.capturing table.master-table th,
-        body.capturing table.master-table td {
+        body.capturing .hide-row { display: none !important; } 
+        body.capturing .table-container {
+            max-height: none !important; 
+            overflow: visible !important;
+        }
+        body.capturing table.master-table th, 
+        body.capturing table.master-table td.col-date {
             position: static !important;
         }
 
@@ -221,6 +226,7 @@
     </div>
 
     <script>
+        // ⚠️ 請填入您的 Google Apps Script 網址 ⚠️
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwfzOoGGdXKa1qY9jOi0H4D5DcR6wJ0Af8yaw6qvNS0TKqtD0AHa1UQ92ib_sAqUweqiQ/exec'; 
 
         const dates = [];
@@ -273,7 +279,7 @@
             }
 
             buildTabsAndViews();
-            if (SCRIPT_URL === '請將您部署後的_Google_Apps_Script_網址貼在這裡' || SCRIPT_URL.includes('請將您部署後')) {
+            if (SCRIPT_URL === '請將您部署後的_Google_Apps_Script_網址貼在這裡') {
                 showToast('請務必在程式碼中設定 API 網址才能儲存！', 'error');
             } else {
                 fetchDataFromCloud();
@@ -307,11 +313,13 @@
             modal.classList.remove('flex');
         }
 
+        // 🌟 修正時間格式化邏輯 (處理小數點與尾數>=60)
         function autoFormatTime(str) {
             if (!str || str.toString().trim() === '') return str;
             let cleanStr = str.toString().trim();
             if (cleanStr.startsWith("'")) cleanStr = cleanStr.substring(1);
             
+            // 遇到小數點，自動轉換為冒號
             if (cleanStr.includes('.')) {
                 cleanStr = cleanStr.replace('.', ':');
             }
@@ -322,6 +330,7 @@
             const hrs = parts[0];
             const mins = parseInt(parts[1], 10);
             
+            // 如果分鐘數大於等於 60，套用 *0.6 進位
             if (!isNaN(mins) && mins >= 60) {
                 const newMins = Math.ceil(mins * 0.6);
                 return `${hrs}:${newMins.toString().padStart(2, '0')}`;
@@ -333,10 +342,6 @@
             if (!str || str.toString().trim() === '' || str.includes('跑位')) return null;
             let s = str.toString().trim();
             if (s.startsWith("'")) s = s.substring(1);
-            
-            if (s.includes('.')) {
-                s = s.replace('.', ':');
-            }
             
             s = autoFormatTime(s);
 
@@ -431,10 +436,12 @@
                 selectEl.innerHTML += `<option value="${idx}">${dStr}</option>`;
             });
 
+            // 🌟 【修正】：預設日期改回當天 (Today)
             const td = new Date();
-            let tomorrowIdx = td.getDate(); 
-            if (tomorrowIdx >= dates.length) tomorrowIdx = dates.length - 1;
-            selectEl.value = tomorrowIdx;
+            let todayIdx = td.getDate() - 1; // 陣列是從 0 開始，所以號碼減 1 就是今天的 index
+            if (todayIdx >= dates.length) todayIdx = dates.length - 1;
+            if (todayIdx < 0) todayIdx = 0;
+            selectEl.value = todayIdx;
 
             const container = document.getElementById('field-inputs-container');
             
@@ -442,7 +449,7 @@
                 container.innerHTML = `
                     <label class="block text-sm font-bold text-gray-700 mb-1">📝 輸入收 (時間讀數) [自動連動隔天開]:</label>
                     <input type="text" id="fieldVal_e" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="例: 11894:88">
-                    <p class="text-xs text-gray-500 mt-1">※ 若分號後超過 60，系統將自動 x0.6 無條件進位。</p>
+                    <p class="text-xs text-gray-500 mt-1">※ 支援小數點，若分號後超過 60 將自動 x0.6 無條件進位。</p>
                 `;
             } else if (item.type === 'time_3') {
                 container.innerHTML = `
@@ -577,7 +584,7 @@
                         <div class="flex flex-wrap gap-2 print-hide">
                             <button onclick="syncDataToCloud()" id="saveBtn" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">☁️ 儲存至試算表</button>
                             <button onclick="openQrModal()" class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">🖨️ 列印 QR Code</button>
-                            <button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">📸 截圖分享總表</button>
+                            <button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">📸 截圖分享 (10天)</button>
                         </div>
                     </div>
                     <div class="table-container" id="masterTableContainer">
@@ -673,12 +680,16 @@
             calcMasterTable();
         }
 
-        function getRawUsage(baseId, dIdx) {
+        function getRawUsage(baseId, dIdx, isTime) {
             let currStr = document.getElementById(`${baseId}_${dIdx}`)?.value;
             if (!currStr || currStr.includes('跑位')) return null;
             
-            if (dIdx === 0) return parseFloat(currStr);
+            // 鍋爐 2 的直接加總邏輯
+            if (isTime) {
+                return timeToMins(currStr);
+            }
             
+            if (dIdx === 0) return null;
             let prevStr = document.getElementById(`${baseId}_${dIdx - 1}`)?.value;
             if (!prevStr || prevStr.includes('跑位')) return null;
 
@@ -707,7 +718,7 @@
             tbody.innerHTML = '';
 
             dates.forEach((dateStr, dIdx) => {
-                let rowHtml = `<tr><td class="col-date">${dateStr}</td>`;
+                let rowHtml = `<tr data-date-idx="${dIdx}"><td class="col-date">${dateStr}</td>`;
                 items.forEach(item => {
                     if (item.type === 'time_oc') {
                         const openVal = timeToMins(document.getElementById(`${item.id}_s_${dIdx}`)?.value);
@@ -719,11 +730,8 @@
                     } else if (item.type === 'time_3') {
                         let totalMins = null;
                         ['low', 'mid', 'high'].forEach(state => {
-                            let currStr = document.getElementById(`${item.id}_${state}_${dIdx}`)?.value;
-                            if (currStr && !currStr.includes('跑位')) {
-                                let mins = timeToMins(currStr);
-                                if (mins !== null) totalMins = (totalMins || 0) + mins;
-                            }
+                            let val = getRawUsage(`${item.id}_${state}`, dIdx, true);
+                            if (val !== null) totalMins = (totalMins || 0) + val;
                         });
                         let usage = totalMins !== null ? minsToTime(totalMins) : '-';
                         rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
@@ -762,7 +770,7 @@
                         rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
                         
                     } else {
-                        let diff = getRawUsage(item.id, dIdx);
+                        let diff = getRawUsage(item.id, dIdx, false);
                         let usage = diff !== null ? diff.toFixed(2) : '-';
                         rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
                     }
@@ -797,9 +805,21 @@
 
         async function takeScreenshot() {
             switchTab('tab-master');
-            showToast('正在產生完整總表截圖，請稍候...', 'loading');
+            showToast('正在產生 10 天份總表截圖...', 'loading');
             
             try {
+                const todayIdx = new Date().getDate() - 1; 
+                let startIdx = todayIdx - 9; 
+                if (startIdx < 0) startIdx = 0; 
+                
+                const rows = document.querySelectorAll('#masterTableBody tr');
+                rows.forEach(row => {
+                    const rowIdx = parseInt(row.getAttribute('data-date-idx'));
+                    if (rowIdx < startIdx || rowIdx > todayIdx) {
+                        row.classList.add('hide-row');
+                    }
+                });
+
                 await new Promise(resolve => setTimeout(resolve, 500));
                 
                 document.body.classList.add('capturing');
@@ -815,9 +835,13 @@
                 });
                 
                 document.body.classList.remove('capturing');
+                rows.forEach(row => row.classList.remove('hide-row'));
                 
                 canvas.toBlob(async (blob) => {
-                    const fileName = `${titleText}設備用量總結算表.jpg`;
+                    const startDateStr = dates[startIdx].split(' ')[0]; 
+                    const endDateStr = dates[todayIdx].split(' ')[0];   
+                    const fileName = `用量總表_${startDateStr}至${endDateStr}.jpg`.replace(/\//g, '');
+                    
                     const file = new File([blob], fileName, { type: 'image/jpeg' });
                     
                     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -844,6 +868,8 @@
                 
             } catch (error) {
                 document.body.classList.remove('capturing');
+                const rows = document.querySelectorAll('#masterTableBody tr');
+                rows.forEach(row => row.classList.remove('hide-row'));
                 showToast('❌ 截圖發生錯誤', 'error');
                 hideLoading();
             }
