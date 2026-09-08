@@ -226,19 +226,15 @@
 
         const dates = [];
         const today = new Date();
-        const adYear = today.getFullYear();
-        const currentYear = adYear - 1911; 
+        const currentYear = today.getFullYear() - 1911; 
         const currentMonth = today.getMonth() + 1; 
         
-        // 🔥 定義這個月專屬的試算表分頁名稱 (例如 "2026-09")
-        const sheetMonth = `${adYear}-${currentMonth < 10 ? '0' + currentMonth : currentMonth}`;
-        
-        const daysInMonth = new Date(adYear, currentMonth, 0).getDate();
+        const daysInMonth = new Date(today.getFullYear(), currentMonth, 0).getDate();
         
         for (let d = 1; d <= daysInMonth; d++) {
             const dayStr = d < 10 ? `0${d}` : `${d}`;
             const weekdays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
-            const dateObj = new Date(adYear, today.getMonth(), d);
+            const dateObj = new Date(today.getFullYear(), today.getMonth(), d);
             const wday = weekdays[dateObj.getDay()];
             const monthStr = currentMonth < 10 ? `0${currentMonth}` : `${currentMonth}`;
             dates.push(`${monthStr}/${dayStr} (${wday})`);
@@ -365,8 +361,7 @@
             if (SCRIPT_URL.includes('請將您部署後')) return;
             showLoading('從雲端載入資料中...');
             try {
-                // 🔥 加上 month 參數，讓後端知道要抓哪個分頁的資料
-                const response = await fetch(`${SCRIPT_URL}?month=${sheetMonth}`, { method: 'GET' });
+                const response = await fetch(SCRIPT_URL, { method: 'GET' });
                 const data = await response.json();
                 
                 for (const key in data) {
@@ -375,7 +370,10 @@
                         let val = String(data[key]);
                         if (val.startsWith("'")) val = val.substring(1);
                         
-                        if (val.match(/^\d{4}-\d{2}-\d{2}/) || val.includes('1899') || val.includes('1901')) {
+                        // 🔥 【修復烏龍防呆機制】
+                        // 原本是用 includes('1901')，結果 11901:45 剛好包含 1901 就被誤殺了！
+                        // 現在改成「只有真正的日期格式 YYYY-MM-DD」才會被判定為格式跑位
+                        if (val.match(/^\d{4}-\d{2}-\d{2}/)) {
                             val = "格式跑位(請重填)";
                         } else if (val.match(/^\d+:\d{2}:00$/)) {
                             val = val.substring(0, val.length - 3); 
@@ -396,10 +394,6 @@
         async function syncDataToCloud(showToastMsg = true) {
             if (SCRIPT_URL.includes('請將您部署後')) return;
             const data = {};
-            
-            // 🔥 送出資料時，附加上要存入的月份標籤
-            data['meta_month'] = sheetMonth;
-
             document.querySelectorAll('input.cell-input').forEach(input => {
                 if (input.value.trim() !== '' && !input.value.includes('跑位')) {
                     let v = input.value.trim();
@@ -408,7 +402,7 @@
                 }
             });
             
-            if (Object.keys(data).length <= 1) return; // 只有 meta_month 就不送出
+            if (Object.keys(data).length === 0) return;
             if (showToastMsg) showLoading('儲存至雲端中...');
             try {
                 const response = await fetch(SCRIPT_URL, {
@@ -441,7 +435,7 @@
             const td = new Date();
             let todayIdx = td.getDate() - 1; 
 
-            // 🔥 AB軟水(dual)，填的是明天的「起始水量」，日期預設跳到明天
+            // 🔥 AB軟水(dual)，因為填的是明天的「起始水量」，日期預設跳到明天
             if (item.type === 'dual') {
                 todayIdx += 1;
             }
@@ -507,11 +501,9 @@
             }
             const dateIdx = parseInt(document.getElementById('fieldTargetDate').value);
             const item = activeFieldItem;
-            
             const dataToSubmit = {};
-            // 🔥 送出資料時，附加上要存入的月份標籤
-            dataToSubmit['meta_month'] = sheetMonth;
 
+            // 🔥 送出資料時，維持原本乾淨的 ID
             if (item.type === 'time_oc') {
                 let val = document.getElementById('fieldVal_e').value.trim();
                 if (!val) { showToast('請輸入數值', 'error'); return; }
