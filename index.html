@@ -439,6 +439,12 @@
             // 🌟 【修正】：預設日期改回當天 (Today)
             const td = new Date();
             let todayIdx = td.getDate() - 1; // 陣列是從 0 開始，所以號碼減 1 就是今天的 index
+
+            // 🔥 【修改重點 1】：如果掃描的是 AB軟水(dual類型) 的 QRCode，預設日期改為明天
+            if (item.type === 'dual') {
+                todayIdx += 1;
+            }
+
             if (todayIdx >= dates.length) todayIdx = dates.length - 1;
             if (todayIdx < 0) todayIdx = 0;
             selectEl.value = todayIdx;
@@ -700,16 +706,17 @@
             return null;
         }
         
+        // 🔥 【修改重點 2】：將原本 12-n 的水塔邏輯，改為正規的水表邏輯 (明天的值 - 今天的值)
         function getTankUsage(currStr, nextStr) {
             if (!currStr || currStr.trim() === '' || !nextStr || nextStr.trim() === '') return null;
             let c = parseFloat(currStr);
             let n = parseFloat(nextStr);
             if (isNaN(c) || isNaN(n)) return null;
             
-            let usage = 0;
-            if (c >= n) usage = c - n;
-            else usage = c + (12 - n);
-            return Math.max(0, usage);
+            // 9/8 用量 = 9/9數值 (n) - 9/8數值 (c)
+            let usage = n - c;
+            
+            return Math.max(0, usage); // 加上 Math.max(0, usage) 避免倒表時產生負數
         }
 
         function calcMasterTable() {
