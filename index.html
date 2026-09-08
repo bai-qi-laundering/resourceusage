@@ -313,13 +313,11 @@
             modal.classList.remove('flex');
         }
 
-        // 🌟 修正時間格式化邏輯 (處理小數點與尾數>=60)
         function autoFormatTime(str) {
             if (!str || str.toString().trim() === '') return str;
             let cleanStr = str.toString().trim();
             if (cleanStr.startsWith("'")) cleanStr = cleanStr.substring(1);
             
-            // 遇到小數點，自動轉換為冒號
             if (cleanStr.includes('.')) {
                 cleanStr = cleanStr.replace('.', ':');
             }
@@ -330,7 +328,6 @@
             const hrs = parts[0];
             const mins = parseInt(parts[1], 10);
             
-            // 如果分鐘數大於等於 60，套用 *0.6 進位
             if (!isNaN(mins) && mins >= 60) {
                 const newMins = Math.ceil(mins * 0.6);
                 return `${hrs}:${newMins.toString().padStart(2, '0')}`;
@@ -436,11 +433,11 @@
                 selectEl.innerHTML += `<option value="${idx}">${dStr}</option>`;
             });
 
-            // 🌟 【修正】：預設日期改回當天 (Today)
+            // 預設日期為當天
             const td = new Date();
-            let todayIdx = td.getDate() - 1; // 陣列是從 0 開始，所以號碼減 1 就是今天的 index
+            let todayIdx = td.getDate() - 1; 
 
-            // 🔥 【修改重點 1】：如果掃描的是 AB軟水(dual類型) 的 QRCode，預設日期改為明天
+            // 🔥 【重點】：如果是 AB軟水(dual)，因為填的是明天的「起始水量」，所以日期預設跳到明天
             if (item.type === 'dual') {
                 todayIdx += 1;
             }
@@ -477,13 +474,16 @@
             } else if (item.type === 'dual') {
                 container.innerHTML = `
                     <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-bold text-gray-700 mb-1">💧 A表 (讀數):</label>
-                            <input type="number" step="0.01" id="fieldVal_a" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="A表讀數 (沒用請打0)">
+                        <div class="p-3 bg-yellow-50 border border-yellow-200 rounded-lg mb-2">
+                            <p class="text-xs text-yellow-800 font-bold">💡 提示：今天晚上的剩餘水量 = 明天的起始水量，日期已自動幫您跳轉至明天。</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-bold text-gray-700 mb-1">💧 B表 (讀數):</label>
-                            <input type="number" step="0.01" id="fieldVal_b" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="B表讀數 (沒用請打0)">
+                            <label class="block text-sm font-bold text-gray-700 mb-1">💧 A水塔 (剩餘刻度):</label>
+                            <input type="number" step="0.01" id="fieldVal_a" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="A表讀數">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">💧 B水塔 (剩餘刻度):</label>
+                            <input type="number" step="0.01" id="fieldVal_b" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="B表讀數">
                         </div>
                     </div>
                 `;
@@ -690,7 +690,6 @@
             let currStr = document.getElementById(`${baseId}_${dIdx}`)?.value;
             if (!currStr || currStr.includes('跑位')) return null;
             
-            // 鍋爐 2 的直接加總邏輯
             if (isTime) {
                 return timeToMins(currStr);
             }
@@ -706,17 +705,17 @@
             return null;
         }
         
-        // 🔥 【修改重點 2】：將原本 12-n 的水塔邏輯，改為正規的水表邏輯 (明天的值 - 今天的值)
+        // 🔥 【恢復重點】：把水塔算法改回原本的 12-n 的反向計算！
         function getTankUsage(currStr, nextStr) {
             if (!currStr || currStr.trim() === '' || !nextStr || nextStr.trim() === '') return null;
             let c = parseFloat(currStr);
             let n = parseFloat(nextStr);
             if (isNaN(c) || isNaN(n)) return null;
             
-            // 9/8 用量 = 9/9數值 (n) - 9/8數值 (c)
-            let usage = n - c;
-            
-            return Math.max(0, usage); // 加上 Math.max(0, usage) 避免倒表時產生負數
+            let usage = 0;
+            if (c >= n) usage = c - n;
+            else usage = c + (12 - n);
+            return Math.max(0, usage);
         }
 
         function calcMasterTable() {
