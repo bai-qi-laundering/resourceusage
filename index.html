@@ -593,7 +593,7 @@
             contentContainer.innerHTML += `
                 <div id="tab-master" class="tab-content active bg-white p-4 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0">
                     <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
-                        <h2 class="text-xl font-bold text-gray-700">📅 ${titleText}設備用量總結算表 (雲端同步版)</h2>
+                        <h2 class="text-xl font-bold text-gray-700">📅 ${titleText}設備用量總結算表</h2>
                         <div class="flex flex-wrap gap-2 print-hide">
                             <button onclick="syncDataToCloud()" id="saveBtn" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">☁️ 儲存至試算表</button>
                             <button onclick="openQrModal()" class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">🖨️ 列印 QR Code</button>
@@ -616,6 +616,7 @@
                 let tableHead = '';
                 let tableBody = '';
 
+                // 🔥 建立表格時，把每一格的 ID 都維持原本乾淨的樣貌
                 if (item.type === 'time_oc') {
                     tableHead = `<tr><th style="width: 120px;">日期</th><th>開 (時間)</th><th>收 (時間)</th></tr>`;
                     tableBody = dates.map((dateStr, dIdx) => `
@@ -712,6 +713,7 @@
             return null;
         }
         
+        // 🔥 AB軟水 12-n 反向計算
         function getTankUsage(currStr, nextStr) {
             if (!currStr || currStr.trim() === '' || !nextStr || nextStr.trim() === '') return null;
             let c = parseFloat(currStr);
