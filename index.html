@@ -324,7 +324,8 @@
             const mins = parseInt(parts[1], 10);
             
             if (!isNaN(mins) && mins >= 60) {
-                const newMins = Math.ceil(mins * 0.6);
+                // 將 Math.ceil 改為 Math.round 來進行四捨五入計算
+                const newMins = Math.round(mins * 0.6);
                 return `${hrs}:${newMins.toString().padStart(2, '0')}`;
             }
             return cleanStr;
@@ -450,7 +451,7 @@
                 container.innerHTML = `
                     <label class="block text-sm font-bold text-gray-700 mb-1">📝 輸入收 (時間讀數) [自動連動隔天開]:</label>
                     <input type="text" id="fieldVal_e" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="例: 11894:88">
-                    <p class="text-xs text-gray-500 mt-1">※ 支援小數點，若分號後超過 60 將自動 x0.6 無條件進位。</p>
+                    <p class="text-xs text-gray-500 mt-1">※ 支援小數點，若分號後超過 60 將自動 x0.6 並四捨五入計算。</p>
                 `;
             } else if (item.type === 'time_3') {
                 container.innerHTML = `
