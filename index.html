@@ -609,11 +609,11 @@
                 let tableHead = '';
                 let tableBody = '';
 
-                // 🔥 建立表格時，把每一格的 ID 都維持原本乾淨的樣貌
+                // 🔥 建立表格時，加入 data-date-idx 屬性以便截圖時篩選
                 if (item.type === 'time_oc') {
                     tableHead = `<tr><th style="width: 120px;">日期</th><th>開 (時間)</th><th>收 (時間)</th></tr>`;
                     tableBody = dates.map((dateStr, dIdx) => `
-                        <tr>
+                        <tr data-date-idx="${dIdx}">
                             <td class="font-semibold bg-gray-50">${dateStr}</td>
                             <td><input type="text" class="cell-input" id="${item.id}_s_${dIdx}" data-id="${item.id}_s_${dIdx}" oninput="calcMasterTable()" onblur="this.value=autoFormatTime(this.value); calcMasterTable()" placeholder="例: 11801:59"></td>
                             <td><input type="text" class="cell-input" id="${item.id}_e_${dIdx}" data-id="${item.id}_e_${dIdx}" oninput="handleCloseInput('${item.id}', ${dIdx})" onblur="this.value=autoFormatTime(this.value); calcMasterTable()" placeholder="例: 11860:46"></td>
@@ -622,7 +622,7 @@
                 } else if (item.type === 'time_3') {
                     tableHead = `<tr><th style="width: 120px;">日期</th><th>低燃燒 (時間)</th><th>中燃燒 (時間)</th><th>高燃燒 (時間)</th></tr>`;
                     tableBody = dates.map((dateStr, dIdx) => `
-                        <tr>
+                        <tr data-date-idx="${dIdx}">
                             <td class="font-semibold bg-gray-50">${dateStr}</td>
                             <td><input type="text" class="cell-input" id="${item.id}_low_${dIdx}" data-id="${item.id}_low_${dIdx}" oninput="calcMasterTable()" onblur="this.value=autoFormatTime(this.value); calcMasterTable()" placeholder="例: 100:30"></td>
                             <td><input type="text" class="cell-input" id="${item.id}_mid_${dIdx}" data-id="${item.id}_mid_${dIdx}" oninput="calcMasterTable()" onblur="this.value=autoFormatTime(this.value); calcMasterTable()" placeholder="例: 200:15"></td>
@@ -632,7 +632,7 @@
                 } else if (item.type === 'dual') {
                     tableHead = `<tr><th style="width: 90px;">日期</th><th>A表讀數</th><th>B表讀數</th><th>A表用量</th><th>B表用量</th></tr>`;
                     tableBody = dates.map((dateStr, dIdx) => `
-                        <tr>
+                        <tr data-date-idx="${dIdx}">
                             <td class="font-semibold bg-gray-50 text-sm">${dateStr}</td>
                             <td><input type="number" step="0.01" class="cell-input" id="${item.id}_a_${dIdx}" data-id="${item.id}_a_${dIdx}" oninput="calcMasterTable()" placeholder="A表"></td>
                             <td><input type="number" step="0.01" class="cell-input" id="${item.id}_b_${dIdx}" data-id="${item.id}_b_${dIdx}" oninput="calcMasterTable()" placeholder="B表"></td>
@@ -643,7 +643,7 @@
                 } else {
                     tableHead = `<tr><th style="width: 120px;">日期</th><th>當日讀數</th></tr>`;
                     tableBody = dates.map((dateStr, dIdx) => `
-                        <tr>
+                        <tr data-date-idx="${dIdx}">
                             <td class="font-semibold bg-gray-50">${dateStr}</td>
                             <td><input type="number" step="0.01" class="cell-input" id="${item.id}_${dIdx}" data-id="${item.id}_${dIdx}" oninput="calcMasterTable()" placeholder="輸入度數"></td>
                         </tr>
@@ -652,9 +652,12 @@
 
                 contentContainer.innerHTML += `
                     <div id="${tabId}" class="tab-content bg-white p-4 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0">
-                        <div class="flex justify-between items-center mb-4">
+                        <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
                             <h2 class="text-xl font-bold text-blue-800">📌 ${item.label} - 每日度數紀錄</h2>
-                            <button onclick="syncDataToCloud()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium">☁️ 儲存至雲端</button>
+                            <div class="flex flex-wrap gap-2 print-hide">
+                                <button onclick="syncDataToCloud()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">☁️ 儲存至雲端</button>
+                                <button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">📸 截圖分享 (10天)</button>
+                            </div>
                         </div>
                         <div class="table-container">
                             <table class="fixed-table">
@@ -811,34 +814,40 @@
         }
 
         async function takeScreenshot() {
-            switchTab('tab-master');
-            showToast('正在產生 10 天份總表截圖...', 'loading');
+            // 自動偵測目前正在顯示的頁籤（總表或個別設備）
+            const activeTab = document.querySelector('.tab-content.active');
+            if (!activeTab) return;
+
+            showToast('正在產生 10 天份報表截圖...', 'loading');
             
             try {
                 const todayIdx = new Date().getDate() - 1; 
                 let startIdx = todayIdx - 9; 
                 if (startIdx < 0) startIdx = 0; 
                 
-                const rows = document.querySelectorAll('#masterTableBody tr');
+                // 針對目前顯示頁籤內的 tbody 中的列進行過濾
+                const rows = activeTab.querySelectorAll('tbody tr');
                 rows.forEach(row => {
-                    const rowIdx = parseInt(row.getAttribute('data-date-idx'));
-                    if (rowIdx < startIdx || rowIdx > todayIdx) {
-                        row.classList.add('hide-row');
+                    const rowIdxStr = row.getAttribute('data-date-idx');
+                    if (rowIdxStr !== null) {
+                        const rowIdx = parseInt(rowIdxStr);
+                        if (rowIdx < startIdx || rowIdx > todayIdx) {
+                            row.classList.add('hide-row');
+                        }
                     }
                 });
 
                 await new Promise(resolve => setTimeout(resolve, 500));
                 
                 document.body.classList.add('capturing');
-                const targetEl = document.querySelector('#tab-master');
                 
-                const canvas = await html2canvas(targetEl, { 
+                const canvas = await html2canvas(activeTab, { 
                     scale: 2, 
                     backgroundColor: '#ffffff',
-                    width: targetEl.scrollWidth,
-                    height: targetEl.scrollHeight,
-                    windowWidth: targetEl.scrollWidth,
-                    windowHeight: targetEl.scrollHeight
+                    width: activeTab.scrollWidth,
+                    height: activeTab.scrollHeight,
+                    windowWidth: activeTab.scrollWidth,
+                    windowHeight: activeTab.scrollHeight
                 });
                 
                 document.body.classList.remove('capturing');
@@ -847,7 +856,15 @@
                 canvas.toBlob(async (blob) => {
                     const startDateStr = dates[startIdx].split(' ')[0]; 
                     const endDateStr = dates[todayIdx].split(' ')[0];   
-                    const fileName = `用量總表_${startDateStr}至${endDateStr}.jpg`.replace(/\//g, '');
+                    
+                    // 動態抓取當前頁籤的標題來當作檔名
+                    const titleEl = activeTab.querySelector('h2');
+                    let titleText = '用量表';
+                    if (titleEl) {
+                        // 移除標題中不要的圖示或空白，保留文字
+                        titleText = titleEl.innerText.replace(/[📅📌\s]/g, '').split('-')[0];
+                    }
+                    const fileName = `${titleText}_${startDateStr}至${endDateStr}.jpg`.replace(/\//g, '');
                     
                     const file = new File([blob], fileName, { type: 'image/jpeg' });
                     
@@ -875,8 +892,11 @@
                 
             } catch (error) {
                 document.body.classList.remove('capturing');
-                const rows = document.querySelectorAll('#masterTableBody tr');
-                rows.forEach(row => row.classList.remove('hide-row'));
+                const activeTab = document.querySelector('.tab-content.active');
+                if (activeTab) {
+                    const rows = activeTab.querySelectorAll('tbody tr');
+                    rows.forEach(row => row.classList.remove('hide-row'));
+                }
                 showToast('❌ 截圖發生錯誤', 'error');
                 hideLoading();
             }
