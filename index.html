@@ -108,6 +108,15 @@
         }
         input.cell-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2); background-color: #eff6ff; }
 
+        /* 🔥 解決截圖 input 裁切的專用樣式 */
+        .temp-capture-input {
+            width: 100%; max-width: 78px; height: 27px;
+            border: 1px solid #cbd5e1; border-radius: 4px;
+            font-size: 13px; background-color: #ffffff;
+            margin: 0 auto; display: flex; align-items: center; justify-content: center;
+            overflow: hidden; white-space: nowrap; box-sizing: border-box;
+        }
+
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
         .toast {
             background-color: #333; color: white; padding: 12px 24px; border-radius: 8px;
@@ -123,7 +132,6 @@
         .spinner { border: 4px solid rgba(0, 0, 0, 0.1); border-left-color: #2563eb; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* 🔥 重點修正：截圖時，強制撐開所有容器，不受手機螢幕寬高限制 */
         body.capturing { 
             min-width: max-content !important; 
         }
@@ -140,10 +148,8 @@
         body.capturing .table-container {
             max-height: none !important; 
             overflow: visible !important;
-            width: max-content !important; /* 強制寬度完全展開 */
+            width: max-content !important;
         }
-        
-        /* 避免各分頁表格在手機上因為 table-layout: fixed 而被壓縮裁切 */
         body.capturing table.fixed-table {
             table-layout: auto !important; 
             width: max-content !important;
@@ -151,14 +157,13 @@
         body.capturing table.fixed-table th, 
         body.capturing table.fixed-table td {
             overflow: visible !important;
-            white-space: nowrap !important; /* 確保文字不會折行或變成省略號 */
+            white-space: nowrap !important;
             text-overflow: clip !important;
         }
-        
         body.capturing table.master-table th, 
         body.capturing table.master-table td.col-date,
         body.capturing table.fixed-table th {
-            position: static !important; /* 解除置頂以防長截圖破圖 */
+            position: static !important;
         }
 
         @media print {
@@ -457,11 +462,9 @@
                 selectEl.innerHTML += `<option value="${idx}">${dStr}</option>`;
             });
 
-            // 預設日期為當天
             const td = new Date();
             let todayIdx = td.getDate() - 1; 
 
-            // 🔥 AB軟水(dual)，因為填的是明天的「起始水量」，日期預設跳到明天
             if (item.type === 'dual') {
                 todayIdx += 1;
             }
@@ -529,7 +532,6 @@
             const item = activeFieldItem;
             const dataToSubmit = {};
 
-            // 🔥 送出資料時，維持原本乾淨的 ID
             if (item.type === 'time_oc') {
                 let val = document.getElementById('fieldVal_e').value.trim();
                 if (!val) { showToast('請輸入數值', 'error'); return; }
@@ -734,7 +736,6 @@
             return null;
         }
         
-        // 🔥 AB軟水 12-n 反向計算
         function getTankUsage(currStr, nextStr) {
             if (!currStr || currStr.trim() === '' || !nextStr || nextStr.trim() === '') return null;
             let c = parseFloat(currStr);
@@ -839,7 +840,6 @@
         }
 
         async function takeScreenshot() {
-            // 自動偵測目前正在顯示的頁籤（總表或個別設備）
             const activeTab = document.querySelector('.tab-content.active');
             if (!activeTab) return;
 
@@ -850,7 +850,6 @@
                 let startIdx = todayIdx - 9; 
                 if (startIdx < 0) startIdx = 0; 
                 
-                // 針對目前顯示頁籤內的 tbody 中的列進行過濾
                 const rows = activeTab.querySelectorAll('tbody tr');
                 rows.forEach(row => {
                     const rowIdxStr = row.getAttribute('data-date-idx');
@@ -862,10 +861,20 @@
                     }
                 });
 
-                // 🔥 加入 capturing，解除全部的高度、寬度與自動縮放限制，撐開完整表格
+                // 🔥【關鍵修復】將 input 暫時轉換為文字 div 以防裁切
+                const inputs = activeTab.querySelectorAll('input.cell-input');
+                inputs.forEach(input => {
+                    const div = document.createElement('div');
+                    div.className = 'temp-capture-input';
+                    div.innerText = input.value || input.placeholder || '';
+                    div.style.color = input.value ? '#1f2937' : '#9ca3af';
+                    input.parentNode.insertBefore(div, input);
+                    input.setAttribute('data-old-display', input.style.display);
+                    input.style.display = 'none';
+                });
+
                 document.body.classList.add('capturing');
                 
-                // 等待 500 毫秒讓瀏覽器把 CSS 動畫跟高度撐開計算完畢
                 await new Promise(resolve => setTimeout(resolve, 500));
                 
                 const canvas = await html2canvas(activeTab, { 
@@ -877,18 +886,23 @@
                     windowHeight: activeTab.scrollHeight
                 });
                 
+                // 截圖完畢，還原介面
                 document.body.classList.remove('capturing');
                 rows.forEach(row => row.classList.remove('hide-row'));
+                
+                const tempDivs = activeTab.querySelectorAll('.temp-capture-input');
+                tempDivs.forEach(div => div.remove());
+                inputs.forEach(input => {
+                    input.style.display = input.getAttribute('data-old-display') || '';
+                });
                 
                 canvas.toBlob(async (blob) => {
                     const startDateStr = dates[startIdx].split(' ')[0]; 
                     const endDateStr = dates[todayIdx].split(' ')[0];   
                     
-                    // 動態抓取當前頁籤的標題來當作檔名
                     const titleEl = activeTab.querySelector('h2');
                     let titleText = '用量表';
                     if (titleEl) {
-                        // 移除標題中不要的圖示或空白，保留文字
                         titleText = titleEl.innerText.replace(/[📅📌\s]/g, '').split('-')[0];
                     }
                     const fileName = `${titleText}_${startDateStr}至${endDateStr}.jpg`.replace(/\//g, '');
@@ -923,6 +937,14 @@
                 if (activeTab) {
                     const rows = activeTab.querySelectorAll('tbody tr');
                     rows.forEach(row => row.classList.remove('hide-row'));
+
+                    // 還原 input
+                    const tempDivs = activeTab.querySelectorAll('.temp-capture-input');
+                    tempDivs.forEach(div => div.remove());
+                    const inputs = activeTab.querySelectorAll('input.cell-input');
+                    inputs.forEach(input => {
+                        input.style.display = input.getAttribute('data-old-display') || '';
+                    });
                 }
                 showToast('❌ 截圖發生錯誤', 'error');
                 hideLoading();
