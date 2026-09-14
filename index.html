@@ -123,15 +123,42 @@
         .spinner { border: 4px solid rgba(0, 0, 0, 0.1); border-left-color: #2563eb; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+        /* 🔥 重點修正：截圖時，強制撐開所有容器，不受手機螢幕寬高限制 */
+        body.capturing { 
+            min-width: max-content !important; 
+        }
+        body.capturing #mainContainer { 
+            max-width: none !important; 
+            width: max-content !important; 
+            margin: 0 !important;
+        }
+        body.capturing .tab-content.active { 
+            width: max-content !important; 
+        }
         body.capturing .print-hide { display: none !important; }
         body.capturing .hide-row { display: none !important; } 
         body.capturing .table-container {
             max-height: none !important; 
             overflow: visible !important;
+            width: max-content !important; /* 強制寬度完全展開 */
         }
+        
+        /* 避免各分頁表格在手機上因為 table-layout: fixed 而被壓縮裁切 */
+        body.capturing table.fixed-table {
+            table-layout: auto !important; 
+            width: max-content !important;
+        }
+        body.capturing table.fixed-table th, 
+        body.capturing table.fixed-table td {
+            overflow: visible !important;
+            white-space: nowrap !important; /* 確保文字不會折行或變成省略號 */
+            text-overflow: clip !important;
+        }
+        
         body.capturing table.master-table th, 
-        body.capturing table.master-table td.col-date {
-            position: static !important;
+        body.capturing table.master-table td.col-date,
+        body.capturing table.fixed-table th {
+            position: static !important; /* 解除置頂以防長截圖破圖 */
         }
 
         @media print {
@@ -372,8 +399,6 @@
                         if (val.startsWith("'")) val = val.substring(1);
                         
                         // 🔥 【修復烏龍防呆機制】
-                        // 原本是用 includes('1901')，結果 11901:45 剛好包含 1901 就被誤殺了！
-                        // 現在改成「只有真正的日期格式 YYYY-MM-DD」才會被判定為格式跑位
                         if (val.match(/^\d{4}-\d{2}-\d{2}/)) {
                             val = "格式跑位(請重填)";
                         } else if (val.match(/^\d+:\d{2}:00$/)) {
@@ -837,9 +862,11 @@
                     }
                 });
 
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
+                // 🔥 加入 capturing，解除全部的高度、寬度與自動縮放限制，撐開完整表格
                 document.body.classList.add('capturing');
+                
+                // 等待 500 毫秒讓瀏覽器把 CSS 動畫跟高度撐開計算完畢
+                await new Promise(resolve => setTimeout(resolve, 500));
                 
                 const canvas = await html2canvas(activeTab, { 
                     scale: 2, 
