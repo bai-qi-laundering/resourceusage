@@ -108,15 +108,6 @@
         }
         input.cell-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2); background-color: #eff6ff; }
 
-        /* 🔥 解決截圖 input 裁切的專用樣式 */
-        .temp-capture-input {
-            width: 100%; max-width: 78px; height: 27px;
-            border: 1px solid #cbd5e1; border-radius: 4px;
-            font-size: 13px; background-color: #ffffff;
-            margin: 0 auto; display: flex; align-items: center; justify-content: center;
-            overflow: hidden; white-space: nowrap; box-sizing: border-box;
-        }
-
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
         .toast {
             background-color: #333; color: white; padding: 12px 24px; border-radius: 8px;
@@ -132,37 +123,18 @@
         .spinner { border: 4px solid rgba(0, 0, 0, 0.1); border-left-color: #2563eb; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        body.capturing { 
-            min-width: max-content !important; 
-        }
-        body.capturing #mainContainer { 
-            max-width: none !important; 
-            width: max-content !important; 
-            margin: 0 !important;
-        }
-        body.capturing .tab-content.active { 
-            width: max-content !important; 
-        }
+        /* 截圖專用屬性：解開所有高度與固定定位，確保畫面全展 */
         body.capturing .print-hide { display: none !important; }
         body.capturing .hide-row { display: none !important; } 
         body.capturing .table-container {
             max-height: none !important; 
             overflow: visible !important;
-            width: max-content !important;
         }
-        body.capturing table.fixed-table {
-            table-layout: auto !important; 
-            width: max-content !important;
-        }
-        body.capturing table.fixed-table th, 
-        body.capturing table.fixed-table td {
-            overflow: visible !important;
-            white-space: nowrap !important;
-            text-overflow: clip !important;
+        body.capturing table.fixed-table th {
+            position: static !important;
         }
         body.capturing table.master-table th, 
-        body.capturing table.master-table td.col-date,
-        body.capturing table.fixed-table th {
+        body.capturing table.master-table td.col-date {
             position: static !important;
         }
 
@@ -287,6 +259,7 @@
         ];
 
         let activeFieldItem = null;
+        let originalCloudData = {}; // 🔥 全域記憶體，用來儲存最新抓下來的原始雲端資料
 
         window.onload = () => {
             document.title = `智慧收尾用量系統 - ${titleText}`;
@@ -356,7 +329,7 @@
             const mins = parseInt(parts[1], 10);
             
             if (!isNaN(mins) && mins >= 60) {
-                // 將 Math.ceil 改為 Math.round 來進行四捨五入計算
+                // 將 Math.ceil 改為 Math.round 進行四捨五入計算
                 const newMins = Math.round(mins * 0.6);
                 return `${hrs}:${newMins.toString().padStart(2, '0')}`;
             }
@@ -397,13 +370,18 @@
                 const response = await fetch(SCRIPT_URL, { method: 'GET' });
                 const data = await response.json();
                 
+                originalCloudData = {}; // 🔥 清空並重新記錄最新的雲端資料
+                
                 for (const key in data) {
+                    let rawVal = String(data[key]);
+                    originalCloudData[key] = rawVal; // 🔥 把每一格的原始狀態存起來
+                    
                     const input = document.getElementById(key);
                     if (input && document.activeElement !== input) { 
-                        let val = String(data[key]);
+                        let val = rawVal;
                         if (val.startsWith("'")) val = val.substring(1);
                         
-                        // 🔥 【修復烏龍防呆機制】
+                        // 🔥 修正防呆機制
                         if (val.match(/^\d{4}-\d{2}-\d{2}/)) {
                             val = "格式跑位(請重填)";
                         } else if (val.match(/^\d+:\d{2}:00$/)) {
@@ -429,12 +407,23 @@
                 if (input.value.trim() !== '' && !input.value.includes('跑位')) {
                     let v = input.value.trim();
                     if (v.includes(':') && !v.startsWith("'")) v = "'" + v;
-                    data[input.getAttribute('data-id')] = v;
+                    
+                    const dataId = input.getAttribute('data-id');
+                    
+                    // 🔥 核心防護：只有當前輸入的值「不同於」雲端原始資料時，才視為新資料並上傳
+                    if (originalCloudData[dataId] !== v) {
+                        data[dataId] = v;
+                    }
                 }
             });
             
-            if (Object.keys(data).length === 0) return;
-            if (showToastMsg) showLoading('儲存至雲端中...');
+            // 如果比對後發現完全沒有新增或修改，就不用發送請求，保留雲端原有的時間戳記
+            if (Object.keys(data).length === 0) {
+                if (showToastMsg) showToast('👍 目前沒有新的修改需要儲存。', 'success');
+                return;
+            }
+            
+            if (showToastMsg) showLoading('儲存變更至雲端中...');
             try {
                 const response = await fetch(SCRIPT_URL, {
                     method: 'POST',
@@ -442,8 +431,12 @@
                     body: JSON.stringify(data)
                 });
                 const result = await response.json();
-                if (result.status === 'success' && showToastMsg) {
-                    showToast('💾 資料已成功儲存至 Google 試算表！', 'success');
+                if (result.status === 'success') {
+                    // 🔥 儲存成功後，把這些新修改的資料更新到記憶體中，避免下次按鈕又重複傳
+                    for (const key in data) {
+                        originalCloudData[key] = data[key];
+                    }
+                    if (showToastMsg) showToast('💾 資料已成功儲存至 Google 試算表！', 'success');
                 }
             } catch (error) {
                 if (showToastMsg) showToast('❌ 儲存失敗，請檢查網路連線。', 'error');
@@ -465,6 +458,7 @@
             const td = new Date();
             let todayIdx = td.getDate() - 1; 
 
+            // AB軟水(dual)，因為填的是明天的「起始水量」，日期預設跳到明天
             if (item.type === 'dual') {
                 todayIdx += 1;
             }
@@ -840,6 +834,7 @@
         }
 
         async function takeScreenshot() {
+            // 自動偵測目前正在顯示的頁籤
             const activeTab = document.querySelector('.tab-content.active');
             if (!activeTab) return;
 
@@ -850,6 +845,7 @@
                 let startIdx = todayIdx - 9; 
                 if (startIdx < 0) startIdx = 0; 
                 
+                // 隱藏非十天內的表格列
                 const rows = activeTab.querySelectorAll('tbody tr');
                 rows.forEach(row => {
                     const rowIdxStr = row.getAttribute('data-date-idx');
@@ -861,22 +857,37 @@
                     }
                 });
 
-                // 🔥【關鍵修復】將 input 暫時轉換為文字 div 以防裁切
-                const inputs = activeTab.querySelectorAll('input.cell-input');
-                inputs.forEach(input => {
-                    const div = document.createElement('div');
-                    div.className = 'temp-capture-input';
-                    div.innerText = input.value || input.placeholder || '';
-                    div.style.color = input.value ? '#1f2937' : '#9ca3af';
-                    input.parentNode.insertBefore(div, input);
-                    input.setAttribute('data-old-display', input.style.display);
-                    input.style.display = 'none';
-                });
-
-                document.body.classList.add('capturing');
-                
                 await new Promise(resolve => setTimeout(resolve, 500));
                 
+                document.body.classList.add('capturing');
+
+                // 🔥 核心修復：防止 input 內文字偏移/被裁切
+                // 截圖瞬間將 <input> 替換為 <div> 純文字，並複製相同樣式
+                const inputs = activeTab.querySelectorAll('input');
+                const inputReplacements = [];
+                inputs.forEach(input => {
+                    if(window.getComputedStyle(input).display === 'none') return;
+                    
+                    const div = document.createElement('div');
+                    div.className = input.className;
+                    div.style.cssText = window.getComputedStyle(input).cssText;
+                    div.style.display = 'flex';
+                    div.style.alignItems = 'center';
+                    div.style.justifyContent = 'center';
+                    div.style.border = '1px solid #cbd5e1';
+                    
+                    let valToDisplay = input.value;
+                    if(!valToDisplay && input.placeholder && !input.placeholder.includes('例:') && input.placeholder !== '輸入度數' && input.placeholder !== 'A表' && input.placeholder !== 'B表') {
+                        valToDisplay = input.placeholder;
+                    }
+                    div.innerText = valToDisplay;
+                    
+                    input.parentNode.insertBefore(div, input);
+                    input.style.display = 'none';
+                    inputReplacements.push({ input, div });
+                });
+                
+                // 拍攝螢幕截圖
                 const canvas = await html2canvas(activeTab, { 
                     scale: 2, 
                     backgroundColor: '#ffffff',
@@ -886,16 +897,15 @@
                     windowHeight: activeTab.scrollHeight
                 });
                 
-                // 截圖完畢，還原介面
+                // 復原 DOM 結構與樣式
                 document.body.classList.remove('capturing');
                 rows.forEach(row => row.classList.remove('hide-row'));
-                
-                const tempDivs = activeTab.querySelectorAll('.temp-capture-input');
-                tempDivs.forEach(div => div.remove());
-                inputs.forEach(input => {
-                    input.style.display = input.getAttribute('data-old-display') || '';
+                inputReplacements.forEach(({ input, div }) => {
+                    input.style.display = '';
+                    div.remove();
                 });
                 
+                // 下載或分享圖片
                 canvas.toBlob(async (blob) => {
                     const startDateStr = dates[startIdx].split(' ')[0]; 
                     const endDateStr = dates[todayIdx].split(' ')[0];   
@@ -932,18 +942,18 @@
                 }, 'image/jpeg', 0.9);
                 
             } catch (error) {
+                // 如果出錯也要確保網頁復原
                 document.body.classList.remove('capturing');
                 const activeTab = document.querySelector('.tab-content.active');
                 if (activeTab) {
                     const rows = activeTab.querySelectorAll('tbody tr');
                     rows.forEach(row => row.classList.remove('hide-row'));
-
-                    // 還原 input
-                    const tempDivs = activeTab.querySelectorAll('.temp-capture-input');
-                    tempDivs.forEach(div => div.remove());
-                    const inputs = activeTab.querySelectorAll('input.cell-input');
-                    inputs.forEach(input => {
-                        input.style.display = input.getAttribute('data-old-display') || '';
+                    const hiddenInputs = activeTab.querySelectorAll('input[style*="display: none"]');
+                    hiddenInputs.forEach(input => {
+                        input.style.display = '';
+                        if(input.previousSibling && input.previousSibling.tagName === 'DIV') {
+                            input.previousSibling.remove();
+                        }
                     });
                 }
                 showToast('❌ 截圖發生錯誤', 'error');
