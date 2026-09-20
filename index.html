@@ -870,6 +870,42 @@
                 
                 document.body.classList.add('capturing');
 
+                // 📸 截圖專用：只在截圖瞬間把報表完整展開，完全不改原本畫面的日期/星期顯示方式
+                const captureTable = activeTab.querySelector('table');
+                const captureContainer = activeTab.querySelector('.table-container');
+                const originalCaptureStyle = {
+                    width: activeTab.style.width,
+                    maxWidth: activeTab.style.maxWidth,
+                    overflow: activeTab.style.overflow,
+                    containerWidth: captureContainer ? captureContainer.style.width : '',
+                    containerMaxWidth: captureContainer ? captureContainer.style.maxWidth : '',
+                    containerOverflow: captureContainer ? captureContainer.style.overflow : '',
+                    tableWidth: captureTable ? captureTable.style.width : '',
+                    tableMinWidth: captureTable ? captureTable.style.minWidth : ''
+                };
+
+                if (captureTable) {
+                    // 分表至少 900px；總表依欄位數自動放寬，避免任何欄位超出或被切掉
+                    const minCaptureWidth = captureTable.classList.contains('master-table')
+                        ? Math.max(110 + items.length * 110, 1100)
+                        : 900;
+
+                    captureTable.style.width = `${minCaptureWidth}px`;
+                    captureTable.style.minWidth = `${minCaptureWidth}px`;
+                    activeTab.style.width = `${minCaptureWidth + 34}px`;
+                    activeTab.style.maxWidth = 'none';
+                    activeTab.style.overflow = 'visible';
+
+                    if (captureContainer) {
+                        captureContainer.style.width = `${minCaptureWidth}px`;
+                        captureContainer.style.maxWidth = 'none';
+                        captureContainer.style.overflow = 'visible';
+                    }
+                }
+
+                // 等瀏覽器重新排版完成後再截圖
+                await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
                 // 🔥 核心修復：防止 input 內文字偏移/被裁切
                 // 截圖瞬間將 <input> 替換為 <div> 純文字，並複製相同樣式
                 const inputs = activeTab.querySelectorAll('input');
@@ -913,6 +949,20 @@
                     input.style.display = '';
                     div.remove();
                 });
+
+                // 截圖完成後恢復原本頁面寬度，不影響平常操作畫面
+                activeTab.style.width = originalCaptureStyle.width;
+                activeTab.style.maxWidth = originalCaptureStyle.maxWidth;
+                activeTab.style.overflow = originalCaptureStyle.overflow;
+                if (captureContainer) {
+                    captureContainer.style.width = originalCaptureStyle.containerWidth;
+                    captureContainer.style.maxWidth = originalCaptureStyle.containerMaxWidth;
+                    captureContainer.style.overflow = originalCaptureStyle.containerOverflow;
+                }
+                if (captureTable) {
+                    captureTable.style.width = originalCaptureStyle.tableWidth;
+                    captureTable.style.minWidth = originalCaptureStyle.tableMinWidth;
+                }
                 
                 // 下載或分享圖片
                 canvas.toBlob(async (blob) => {
