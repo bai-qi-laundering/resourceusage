@@ -624,8 +624,12 @@
             `;
 
             items.forEach(item => {
-                const tabId = `tab-${item.id}`;
-                tabsContainer.innerHTML += `<button onclick="switchTab('${tabId}')" id="btn-${tabId}" class="nav-tab">📋 ${item.label}</button>`;
+                // 瓦斯1、瓦斯2合併成同一個分頁；gas2 不再另外建立分頁
+                if (item.id === 'gas2') return;
+
+                const tabId = item.id === 'gas1' ? 'tab-gas-combined' : `tab-${item.id}`;
+                const tabLabel = item.id === 'gas1' ? '瓦斯1 / 瓦斯2' : item.label;
+                tabsContainer.innerHTML += `<button onclick="switchTab('${tabId}')" id="btn-${tabId}" class="nav-tab">📋 ${tabLabel}</button>`;
 
                 let tableHead = '';
                 let tableBody = '';
@@ -664,6 +668,26 @@
                             <td id="usage_${item.id}_total_${dIdx}" class="font-black text-emerald-700 bg-emerald-50">-</td>
                         </tr>
                     `).join('');
+                } else if (item.id === 'gas1') {
+                    // 瓦斯1 + 瓦斯2 合併表；底層 ID 仍維持 gas1 / gas2，不影響既有雲端資料
+                    tableHead = `<tr>
+                        <th style="width: 140px;">日期</th>
+                        <th>瓦斯1讀數</th>
+                        <th>瓦斯1今日用量</th>
+                        <th>瓦斯2讀數</th>
+                        <th>瓦斯2今日用量</th>
+                        <th>總用量</th>
+                    </tr>`;
+                    tableBody = dates.map((dateStr, dIdx) => `
+                        <tr data-date-idx="${dIdx}">
+                            <td class="font-semibold bg-gray-50">${dateStr}</td>
+                            <td><input type="number" step="0.01" class="cell-input" id="gas1_${dIdx}" data-id="gas1_${dIdx}" oninput="calcMasterTable()" placeholder="瓦斯1讀數"></td>
+                            <td id="usage_gas1_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td>
+                            <td><input type="number" step="0.01" class="cell-input" id="gas2_${dIdx}" data-id="gas2_${dIdx}" oninput="calcMasterTable()" placeholder="瓦斯2讀數"></td>
+                            <td id="usage_gas2_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td>
+                            <td id="usage_gas_total_${dIdx}" class="font-black text-emerald-700 bg-emerald-50">-</td>
+                        </tr>
+                    `).join('');
                 } else {
                     tableHead = `<tr><th style="width: 120px;">日期</th><th>當日讀數</th><th>今日用量</th></tr>`;
                     tableBody = dates.map((dateStr, dIdx) => `
@@ -678,7 +702,7 @@
                 contentContainer.innerHTML += `
                     <div id="${tabId}" class="tab-content bg-white p-4 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0">
                         <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
-                            <h2 class="text-xl font-bold text-blue-800">📌 ${item.label} - 每日度數紀錄</h2>
+                            <h2 class="text-xl font-bold text-blue-800">📌 ${item.id === 'gas1' ? '瓦斯1 / 瓦斯2' : item.label} - 每日度數紀錄</h2>
                             <div class="flex flex-wrap gap-2 print-hide">
                                 <button onclick="syncDataToCloud()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">☁️ 儲存至雲端</button>
                                 <button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">📸 截圖分享 (10天)</button>
@@ -823,6 +847,19 @@
                 });
                 rowHtml += `</tr>`;
                 tbody.innerHTML += rowHtml;
+
+                // 瓦斯合併分頁：瓦斯1今日用量 + 瓦斯2今日用量
+                const gas1Usage = getRawUsage('gas1', dIdx, false);
+                const gas2Usage = getRawUsage('gas2', dIdx, false);
+                const gasTotalTd = document.getElementById(`usage_gas_total_${dIdx}`);
+
+                if (gasTotalTd) {
+                    if (gas1Usage !== null || gas2Usage !== null) {
+                        gasTotalTd.innerText = ((gas1Usage || 0) + (gas2Usage || 0)).toFixed(2);
+                    } else {
+                        gasTotalTd.innerText = '-';
+                    }
+                }
             });
         }
 
