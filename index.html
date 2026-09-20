@@ -843,180 +843,154 @@
         }
 
         async function takeScreenshot() {
-            // 自動偵測目前正在顯示的頁籤
             const activeTab = document.querySelector('.tab-content.active');
             if (!activeTab) return;
 
-            showToast('正在產生 10 天份報表截圖...', 'loading');
-            
+            showToast('正在產生 10 天份報表圖片...', 'loading');
+
             try {
-                const todayIdx = new Date().getDate() - 1; 
-                let startIdx = todayIdx - 9; 
-                if (startIdx < 0) startIdx = 0; 
-                
-                // 隱藏非十天內的表格列
-                const rows = activeTab.querySelectorAll('tbody tr');
-                rows.forEach(row => {
-                    const rowIdxStr = row.getAttribute('data-date-idx');
-                    if (rowIdxStr !== null) {
-                        const rowIdx = parseInt(rowIdxStr);
-                        if (rowIdx < startIdx || rowIdx > todayIdx) {
-                            row.classList.add('hide-row');
-                        }
+                const todayIdx = new Date().getDate() - 1;
+                const startIdx = Math.max(0, todayIdx - 9);
+                const sourceTable = activeTab.querySelector('table');
+                if (!sourceTable) throw new Error('找不到表格');
+
+                // 建立「純報表」暫存區：不截網頁外框、不截按鈕，也不改原本畫面。
+                const report = document.createElement('div');
+                report.style.cssText = `
+                    position: fixed; left: -100000px; top: 0;
+                    background: #fff; padding: 28px 30px 32px;
+                    box-sizing: border-box; font-family: 'Microsoft JhengHei','Segoe UI',sans-serif;
+                `;
+
+                const title = document.createElement('div');
+                const sourceTitle = activeTab.querySelector('h2');
+                title.textContent = sourceTitle ? sourceTitle.innerText : '每日用量紀錄';
+                title.style.cssText = `
+                    font-size: 30px; line-height: 1.25; font-weight: 800;
+                    color: #1e3a8a; margin: 0 0 20px 4px; white-space: nowrap;
+                `;
+                report.appendChild(title);
+
+                const table = sourceTable.cloneNode(true);
+
+                // 只保留最近 10 天。
+                table.querySelectorAll('tbody tr').forEach(row => {
+                    const idx = parseInt(row.getAttribute('data-date-idx'), 10);
+                    if (!Number.isNaN(idx) && (idx < startIdx || idx > todayIdx)) row.remove();
+                });
+
+                // cloneNode 不一定會帶入使用者目前輸入值，因此依 data-id 從原表抓實際值。
+                table.querySelectorAll('input').forEach(cloneInput => {
+                    const dataId = cloneInput.getAttribute('data-id');
+                    const originalInput = dataId ? document.querySelector(`[data-id="${dataId}"]`) : null;
+                    const value = originalInput ? originalInput.value : cloneInput.value;
+                    const text = document.createElement('span');
+                    text.textContent = value || '';
+                    text.style.cssText = `
+                        display:flex; align-items:center; justify-content:center;
+                        width:100%; min-height:38px; box-sizing:border-box;
+                        font-size:18px; color:#111827; white-space:nowrap;
+                    `;
+                    cloneInput.replaceWith(text);
+                });
+
+                // 截圖專用表格樣式：日期加寬，所有文字完整顯示且置中。
+                const colCount = table.querySelectorAll('thead th').length || 1;
+                const dateWidth = 190;
+                const otherWidth = sourceTable.classList.contains('master-table') ? 125 : 210;
+                const tableWidth = dateWidth + Math.max(0, colCount - 1) * otherWidth;
+                report.style.width = `${tableWidth + 60}px`;
+
+                table.style.cssText = `
+                    width:${tableWidth}px; min-width:${tableWidth}px; max-width:none;
+                    table-layout:fixed; border-collapse:collapse; border-spacing:0;
+                    background:#fff; margin:0; box-shadow:none; border-radius:0;
+                `;
+
+                table.querySelectorAll('th, td').forEach((cell, index) => {
+                    cell.style.position = 'static';
+                    cell.style.left = 'auto';
+                    cell.style.top = 'auto';
+                    cell.style.height = '58px';
+                    cell.style.padding = '8px 10px';
+                    cell.style.boxSizing = 'border-box';
+                    cell.style.border = '1px solid #cbd5e1';
+                    cell.style.textAlign = 'center';
+                    cell.style.verticalAlign = 'middle';
+                    cell.style.overflow = 'visible';
+                    cell.style.textOverflow = 'clip';
+                    cell.style.whiteSpace = 'nowrap';
+                    cell.style.fontSize = '18px';
+                });
+
+                table.querySelectorAll('thead th').forEach(th => {
+                    th.style.background = '#bfdbfe';
+                    th.style.color = '#1e3a8a';
+                    th.style.fontWeight = '800';
+                    th.style.fontSize = '19px';
+                });
+
+                // 第一欄日期固定足夠寬度，完整保留原本「09/20 (週日)」格式。
+                table.querySelectorAll('tr').forEach(row => {
+                    const first = row.children[0];
+                    if (first) {
+                        first.style.width = `${dateWidth}px`;
+                        first.style.minWidth = `${dateWidth}px`;
+                        first.style.maxWidth = `${dateWidth}px`;
+                        first.style.fontWeight = '700';
+                        first.style.whiteSpace = 'nowrap';
+                        first.style.overflow = 'visible';
+                        first.style.textOverflow = 'clip';
+                    }
+                    for (let i = 1; i < row.children.length; i++) {
+                        row.children[i].style.width = `${otherWidth}px`;
+                        row.children[i].style.minWidth = `${otherWidth}px`;
+                        row.children[i].style.maxWidth = `${otherWidth}px`;
                     }
                 });
 
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                document.body.classList.add('capturing');
-
-                // 📸 截圖專用：只在截圖瞬間把報表完整展開，完全不改原本畫面的日期/星期顯示方式
-                const captureTable = activeTab.querySelector('table');
-                const captureContainer = activeTab.querySelector('.table-container');
-                const originalCaptureStyle = {
-                    width: activeTab.style.width,
-                    maxWidth: activeTab.style.maxWidth,
-                    overflow: activeTab.style.overflow,
-                    containerWidth: captureContainer ? captureContainer.style.width : '',
-                    containerMaxWidth: captureContainer ? captureContainer.style.maxWidth : '',
-                    containerOverflow: captureContainer ? captureContainer.style.overflow : '',
-                    tableWidth: captureTable ? captureTable.style.width : '',
-                    tableMinWidth: captureTable ? captureTable.style.minWidth : ''
-                };
-
-                if (captureTable) {
-                    // 分表至少 900px；總表依欄位數自動放寬，避免任何欄位超出或被切掉
-                    const minCaptureWidth = captureTable.classList.contains('master-table')
-                        ? Math.max(110 + items.length * 110, 1100)
-                        : 900;
-
-                    captureTable.style.width = `${minCaptureWidth}px`;
-                    captureTable.style.minWidth = `${minCaptureWidth}px`;
-                    activeTab.style.width = `${minCaptureWidth + 34}px`;
-                    activeTab.style.maxWidth = 'none';
-                    activeTab.style.overflow = 'visible';
-
-                    if (captureContainer) {
-                        captureContainer.style.width = `${minCaptureWidth}px`;
-                        captureContainer.style.maxWidth = 'none';
-                        captureContainer.style.overflow = 'visible';
-                    }
-                }
-
-                // 等瀏覽器重新排版完成後再截圖
+                report.appendChild(table);
+                document.body.appendChild(report);
                 await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
-                // 🔥 核心修復：防止 input 內文字偏移/被裁切
-                // 截圖瞬間將 <input> 替換為 <div> 純文字，並複製相同樣式
-                const inputs = activeTab.querySelectorAll('input');
-                const inputReplacements = [];
-                inputs.forEach(input => {
-                    if(window.getComputedStyle(input).display === 'none') return;
-                    
-                    const div = document.createElement('div');
-                    div.className = input.className;
-                    div.style.cssText = window.getComputedStyle(input).cssText;
-                    div.style.display = 'flex';
-                    div.style.alignItems = 'center';
-                    div.style.justifyContent = 'center';
-                    div.style.border = '1px solid #cbd5e1';
-                    
-                    let valToDisplay = input.value;
-                    if(!valToDisplay && input.placeholder && !input.placeholder.includes('例:') && input.placeholder !== '輸入度數' && input.placeholder !== 'A表' && input.placeholder !== 'B表') {
-                        valToDisplay = input.placeholder;
-                    }
-                    div.innerText = valToDisplay;
-                    
-                    input.parentNode.insertBefore(div, input);
-                    input.style.display = 'none';
-                    inputReplacements.push({ input, div });
-                });
-                
-                // 拍攝螢幕截圖
-                const canvas = await html2canvas(activeTab, { 
-                    scale: 2, 
+                const canvas = await html2canvas(report, {
+                    scale: 2,
                     backgroundColor: '#ffffff',
-                    width: activeTab.scrollWidth,
-                    height: activeTab.scrollHeight,
-                    windowWidth: activeTab.scrollWidth,
-                    windowHeight: activeTab.scrollHeight
-                });
-                
-                // 復原 DOM 結構與樣式
-                document.body.classList.remove('capturing');
-                rows.forEach(row => row.classList.remove('hide-row'));
-                inputReplacements.forEach(({ input, div }) => {
-                    input.style.display = '';
-                    div.remove();
+                    width: report.scrollWidth,
+                    height: report.scrollHeight,
+                    windowWidth: report.scrollWidth,
+                    windowHeight: report.scrollHeight,
+                    scrollX: 0,
+                    scrollY: 0
                 });
 
-                // 截圖完成後恢復原本頁面寬度，不影響平常操作畫面
-                activeTab.style.width = originalCaptureStyle.width;
-                activeTab.style.maxWidth = originalCaptureStyle.maxWidth;
-                activeTab.style.overflow = originalCaptureStyle.overflow;
-                if (captureContainer) {
-                    captureContainer.style.width = originalCaptureStyle.containerWidth;
-                    captureContainer.style.maxWidth = originalCaptureStyle.containerMaxWidth;
-                    captureContainer.style.overflow = originalCaptureStyle.containerOverflow;
-                }
-                if (captureTable) {
-                    captureTable.style.width = originalCaptureStyle.tableWidth;
-                    captureTable.style.minWidth = originalCaptureStyle.tableMinWidth;
-                }
-                
-                // 下載或分享圖片
+                report.remove();
+
                 canvas.toBlob(async (blob) => {
-                    const startDateStr = dates[startIdx].split(' ')[0]; 
-                    const endDateStr = dates[todayIdx].split(' ')[0];   
-                    
-                    const titleEl = activeTab.querySelector('h2');
-                    let titleText = '用量表';
-                    if (titleEl) {
-                        titleText = titleEl.innerText.replace(/[📅📌\s]/g, '').split('-')[0];
-                    }
-                    const fileName = `${titleText}_${startDateStr}至${endDateStr}.jpg`.replace(/\//g, '');
-                    
+                    const startDateStr = dates[startIdx].split(' ')[0];
+                    const endDateStr = dates[todayIdx].split(' ')[0];
+                    let fileTitle = sourceTitle ? sourceTitle.innerText.replace(/[📅📌\s]/g, '').split('-')[0] : '用量表';
+                    const fileName = `${fileTitle}_${startDateStr}至${endDateStr}.jpg`.replace(/\//g, '');
                     const file = new File([blob], fileName, { type: 'image/jpeg' });
-                    
+
                     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
                         try {
-                            await navigator.share({
-                                files: [file],
-                                title: fileName,
-                                text: fileName
-                            });
+                            await navigator.share({ files: [file], title: fileName, text: fileName });
                             showToast('✅ 成功開啟分享選單！', 'success');
                         } catch (error) {
-                            if (error.name !== 'AbortError') {
-                                showToast('❌ 分享失敗，改為直接下載', 'error');
-                                downloadFallback(blob, fileName);
-                            } else {
-                                hideLoading(); 
-                            }
+                            if (error.name !== 'AbortError') downloadFallback(blob, fileName);
                         }
                     } else {
-                        showToast('📥 裝置不支援分享，改為自動下載', 'success');
                         downloadFallback(blob, fileName);
+                        showToast('📥 報表圖片已產生！', 'success');
                     }
-                }, 'image/jpeg', 0.9);
-                
+                }, 'image/jpeg', 0.95);
+
             } catch (error) {
-                // 如果出錯也要確保網頁復原
-                document.body.classList.remove('capturing');
-                const activeTab = document.querySelector('.tab-content.active');
-                if (activeTab) {
-                    const rows = activeTab.querySelectorAll('tbody tr');
-                    rows.forEach(row => row.classList.remove('hide-row'));
-                    const hiddenInputs = activeTab.querySelectorAll('input[style*="display: none"]');
-                    hiddenInputs.forEach(input => {
-                        input.style.display = '';
-                        if(input.previousSibling && input.previousSibling.tagName === 'DIV') {
-                            input.previousSibling.remove();
-                        }
-                    });
-                }
+                document.querySelectorAll('body > div').forEach(el => {
+                    if (el.style && el.style.left === '-100000px') el.remove();
+                });
                 showToast('❌ 截圖發生錯誤', 'error');
-                hideLoading();
             }
         }
 
