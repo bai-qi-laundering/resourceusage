@@ -100,8 +100,7 @@
             z-index: 15; 
             background-color: #93c5fd; 
         }
-        table.master-table .col-std { width: 90px; min-width: 90px; max-width: 90px; }
-        table.master-table .col-b { width: 100px; min-width: 100px; max-width: 100px; }
+        table.master-table .col-std { width: 100px; min-width: 100px; max-width: 100px; }
 
         input.cell-input {
             width: 100%; max-width: 78px; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px;
@@ -221,8 +220,8 @@
     </div>
 
     <script>
-        // ⚠️ 貼上妳的 API 網址
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxPwF2CD-Pa3ek96IB2uDFGMRqBnq5Oj7zcf8U72fUkZbOW_T_Toh68nCs9Pcu9Mmx4Ng/exec'; 
+        // ⚠️ 請確認這是妳最新的 API 網址
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwfzOoGGdXKa1qY9jOi0H4D5DcR6wJ0Af8yaw6qvNS0TKqtD0AHa1UQ92ib_sAqUweqiQ/exec'; 
 
         const dates = [];
         const today = new Date();
@@ -254,7 +253,7 @@
             { id: 'meng', label: '猛砂', type: 'normal' }
         ];
 
-        // B 系統要顯示的欄位列表
+        // B 系統欄位：請確保這裡的字眼跟 Google 表格裡的標題 100% 一模一樣，否則會抓不到資料
         const bCols = ["開機時間", "關機時間", "平面數量", "枕套數量", "員工簽名圖檔", "機台名稱", "單一總數量(其他)", "1號機(撐開)", "2號機(撐開)", "3號機(撐開)", "4號機(撐開)", "上班人數(撐開 )", "單日總量 (撐開)", "床被(撐開)", "檯布(撐開)"];
 
         let activeFieldItem = null;
@@ -316,17 +315,11 @@
             if (!str || str.toString().trim() === '') return str;
             let cleanStr = str.toString().trim();
             if (cleanStr.startsWith("'")) cleanStr = cleanStr.substring(1);
-            
-            if (cleanStr.includes('.')) {
-                cleanStr = cleanStr.replace('.', ':');
-            }
-            
+            if (cleanStr.includes('.')) cleanStr = cleanStr.replace('.', ':');
             if (!cleanStr.includes(':')) return cleanStr;
-
             const parts = cleanStr.split(':');
             const hrs = parts[0];
             const mins = parseInt(parts[1], 10);
-            
             if (!isNaN(mins) && mins >= 60) {
                 const newMins = Math.round(mins * 0.6);
                 return `${hrs}:${newMins.toString().padStart(2, '0')}`;
@@ -339,24 +332,18 @@
             let s = str.toString().trim();
             if (s.startsWith("'")) s = s.substring(1);
             s = autoFormatTime(s);
-
             let h = 0, m = 0;
             if (s.includes(':')) {
                 let p = s.split(':');
-                h = parseInt(p[0], 10) || 0;
-                m = parseInt(p[1], 10) || 0;
-            } else {
-                h = parseInt(s, 10) || 0;
-            }
+                h = parseInt(p[0], 10) || 0; m = parseInt(p[1], 10) || 0;
+            } else { h = parseInt(s, 10) || 0; }
             return h * 60 + m;
         }
 
         function minsToTime(mins) {
             if (mins === null || isNaN(mins)) return '-';
-            let isNeg = mins < 0;
-            mins = Math.abs(mins);
-            let h = Math.floor(mins / 60);
-            let m = Math.round(mins % 60);
+            let isNeg = mins < 0; mins = Math.abs(mins);
+            let h = Math.floor(mins / 60); let m = Math.round(mins % 60);
             return (isNeg ? '-' : '') + `${h}:${m.toString().padStart(2, '0')}`;
         }
 
@@ -366,22 +353,16 @@
             try {
                 const response = await fetch(SCRIPT_URL, { method: 'GET' });
                 const data = await response.json();
-                
                 originalCloudData = {}; 
-                
                 for (const key in data) {
                     let rawVal = String(data[key]);
                     originalCloudData[key] = rawVal; 
-                    
                     const input = document.getElementById(key);
                     if (input && document.activeElement !== input) { 
                         let val = rawVal;
                         if (val.startsWith("'")) val = val.substring(1);
-                        if (val.match(/^\d{4}-\d{2}-\d{2}/)) {
-                            val = "格式跑位(請重填)";
-                        } else if (val.match(/^\d+:\d{2}:00$/)) {
-                            val = val.substring(0, val.length - 3); 
-                        }
+                        if (val.match(/^\d{4}-\d{2}-\d{2}/)) val = "格式跑位";
+                        else if (val.match(/^\d+:\d{2}:00$/)) val = val.substring(0, val.length - 3); 
                         input.value = val;
                     }
                 }
@@ -389,9 +370,7 @@
                 showToast('✅ 雲端資料同步完成！', 'success');
             } catch (error) {
                 showToast('❌ 讀取雲端資料失敗，請確認網路設定。', 'error');
-            } finally {
-                hideLoading();
-            }
+            } finally { hideLoading(); }
         }
 
         async function syncDataToCloud(showToastMsg = true) {
@@ -401,83 +380,47 @@
                 if (input.value.trim() !== '' && !input.value.includes('跑位')) {
                     let v = input.value.trim();
                     if (v.includes(':') && !v.startsWith("'")) v = "'" + v;
-                    
                     const dataId = input.getAttribute('data-id');
-                    if (originalCloudData[dataId] !== v) {
-                        data[dataId] = v;
-                    }
+                    if (originalCloudData[dataId] !== v) data[dataId] = v;
                 }
             });
-            
             if (Object.keys(data).length === 0) {
-                if (showToastMsg) showToast('👍 目前沒有新的修改需要儲存。', 'success');
-                return;
+                if (showToastMsg) showToast('👍 目前沒有新的修改需要儲存。', 'success'); return;
             }
-            
             if (showToastMsg) showLoading('儲存變更至雲端中...');
             try {
                 const response = await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(data)
                 });
                 const result = await response.json();
                 if (result.status === 'success') {
-                    for (const key in data) {
-                        originalCloudData[key] = data[key];
-                    }
+                    for (const key in data) originalCloudData[key] = data[key];
                     if (showToastMsg) showToast('💾 資料已成功儲存至 Google 試算表！', 'success');
                 }
-            } catch (error) {
-                if (showToastMsg) showToast('❌ 儲存失敗，請檢查網路連線。', 'error');
-            } finally {
-                if (showToastMsg) hideLoading();
-            }
+            } catch (error) { if (showToastMsg) showToast('❌ 儲存失敗，請檢查網路連線。', 'error'); } 
+            finally { if (showToastMsg) hideLoading(); }
         }
 
         function initFieldWorkerView(item) {
             activeFieldItem = item;
             document.getElementById('field-device-title').innerText = item.label;
-
-            const selectEl = document.getElementById('fieldTargetDate');
-            selectEl.innerHTML = '';
-            dates.forEach((dStr, idx) => {
-                selectEl.innerHTML += `<option value="${idx}">${dStr}</option>`;
-            });
-
-            const td = new Date();
-            let todayIdx = td.getDate() - 1; 
+            const selectEl = document.getElementById('fieldTargetDate'); selectEl.innerHTML = '';
+            dates.forEach((dStr, idx) => { selectEl.innerHTML += `<option value="${idx}">${dStr}</option>`; });
+            const td = new Date(); let todayIdx = td.getDate() - 1; 
             if (item.type === 'dual') todayIdx += 1;
             if (todayIdx >= dates.length) todayIdx = dates.length - 1;
             if (todayIdx < 0) todayIdx = 0;
             selectEl.value = todayIdx;
-
             const container = document.getElementById('field-inputs-container');
             if (item.type === 'time_oc') {
-                container.innerHTML = `
-                    <label class="block text-sm font-bold text-gray-700 mb-1">📝 輸入收 (時間讀數) [自動連動隔天開]:</label>
-                    <input type="text" id="fieldVal_e" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30" placeholder="例: 11894:88">
-                `;
+                container.innerHTML = `<label class="block text-sm font-bold text-gray-700 mb-1">📝 輸入收 (時間讀數) [自動連動隔天開]:</label><input type="text" id="fieldVal_e" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30">`;
             } else if (item.type === 'time_3') {
-                container.innerHTML = `
-                    <div class="space-y-4">
-                        <div><label class="block text-sm font-bold text-gray-700 mb-1">🔥 低燃燒 (時間讀數):</label><input type="text" id="fieldVal_low" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div>
-                        <div><label class="block text-sm font-bold text-gray-700 mb-1">🔥🔥 中燃燒 (時間讀數):</label><input type="text" id="fieldVal_mid" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div>
-                        <div><label class="block text-sm font-bold text-gray-700 mb-1">🔥🔥🔥 高燃燒 (時間讀數):</label><input type="text" id="fieldVal_high" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div>
-                    </div>
-                `;
+                container.innerHTML = `<div class="space-y-4"><div><label class="block text-sm font-bold text-gray-700 mb-1">🔥 低燃燒 (時間讀數):</label><input type="text" id="fieldVal_low" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div><div><label class="block text-sm font-bold text-gray-700 mb-1">🔥🔥 中燃燒 (時間讀數):</label><input type="text" id="fieldVal_mid" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div><div><label class="block text-sm font-bold text-gray-700 mb-1">🔥🔥🔥 高燃燒 (時間讀數):</label><input type="text" id="fieldVal_high" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div></div>`;
             } else if (item.type === 'dual') {
-                container.innerHTML = `
-                    <div class="space-y-4">
-                        <div><label class="block text-sm font-bold text-gray-700 mb-1">💧 A水塔 (剩餘刻度):</label><input type="number" step="0.01" id="fieldVal_a" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div>
-                        <div><label class="block text-sm font-bold text-gray-700 mb-1">💧 B水塔 (剩餘刻度):</label><input type="number" step="0.01" id="fieldVal_b" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div>
-                    </div>
-                `;
+                container.innerHTML = `<div class="space-y-4"><div><label class="block text-sm font-bold text-gray-700 mb-1">💧 A水塔 (剩餘刻度):</label><input type="number" step="0.01" id="fieldVal_a" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div><div><label class="block text-sm font-bold text-gray-700 mb-1">💧 B水塔 (剩餘刻度):</label><input type="number" step="0.01" id="fieldVal_b" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div></div>`;
             } else {
-                container.innerHTML = `
-                    <label class="block text-sm font-bold text-gray-700 mb-1">📝 輸入當日讀數:</label>
-                    <input type="number" step="0.01" id="fieldVal" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30">
-                `;
+                container.innerHTML = `<label class="block text-sm font-bold text-gray-700 mb-1">📝 輸入當日讀數:</label><input type="number" step="0.01" id="fieldVal" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30">`;
             }
             document.getElementById('fieldWorkerView').style.display = 'flex';
         }
@@ -485,14 +428,11 @@
         async function submitFieldData() {
             if (SCRIPT_URL.includes('請將您部署後')) { showToast('系統未設定 API 網址！', 'error'); return; }
             const dateIdx = parseInt(document.getElementById('fieldTargetDate').value);
-            const item = activeFieldItem;
-            const dataToSubmit = {};
-
+            const item = activeFieldItem; const dataToSubmit = {};
             if (item.type === 'time_oc') {
                 let val = document.getElementById('fieldVal_e').value.trim();
                 if (!val) { showToast('請輸入數值', 'error'); return; }
-                val = autoFormatTime(val); 
-                const protectedVal = val.includes(':') ? "'" + val : val;
+                val = autoFormatTime(val); const protectedVal = val.includes(':') ? "'" + val : val;
                 dataToSubmit[`${item.id}_e_${dateIdx}`] = protectedVal;
                 if (dateIdx + 1 < dates.length) dataToSubmit[`${item.id}_s_${dateIdx + 1}`] = protectedVal;
             } else if (item.type === 'time_3') {
@@ -504,11 +444,9 @@
                 if (m) dataToSubmit[`${item.id}_mid_${dateIdx}`] = m.includes(':') ? "'" + m : m;
                 if (h) dataToSubmit[`${item.id}_high_${dateIdx}`] = h.includes(':') ? "'" + h : h;
             } else if (item.type === 'dual') {
-                const a = document.getElementById('fieldVal_a').value.trim();
-                const b = document.getElementById('fieldVal_b').value.trim();
+                const a = document.getElementById('fieldVal_a').value.trim(); const b = document.getElementById('fieldVal_b').value.trim();
                 if (!a && !b) { showToast('請至少填寫一個', 'error'); return; }
-                if (a) dataToSubmit[`${item.id}_a_${dateIdx}`] = a;
-                if (b) dataToSubmit[`${item.id}_b_${dateIdx}`] = b;
+                if (a) dataToSubmit[`${item.id}_a_${dateIdx}`] = a; if (b) dataToSubmit[`${item.id}_b_${dateIdx}`] = b;
             } else {
                 const val = document.getElementById('fieldVal').value.trim();
                 if (!val) { showToast('請輸入數值', 'error'); return; }
@@ -517,13 +455,8 @@
 
             const btn = document.getElementById('fieldSubmitBtn');
             btn.disabled = true; btn.innerText = '⏳ 雲端傳輸中...'; btn.classList.replace('bg-blue-600', 'bg-gray-500');
-
             try {
-                const response = await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(dataToSubmit)
-                });
+                const response = await fetch(SCRIPT_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(dataToSubmit) });
                 const result = await response.json();
                 if (result.status === 'success') {
                     showToast(`✅ 數據已成功寫入！`, 'success');
@@ -539,15 +472,12 @@
         function buildTabsAndViews() {
             const tabsContainer = document.getElementById('navTabsContainer');
             const contentContainer = document.getElementById('tabsContentContainer');
-            tabsContainer.innerHTML = '';
-            contentContainer.innerHTML = '';
+            tabsContainer.innerHTML = ''; contentContainer.innerHTML = '';
 
-            // --- 修改點：加入 B 系統的專屬表頭 ---
+            // 完美合併：將 A 系統與 B 系統的標題全部接續在同一個表頭 (同一列) 中
             let thHtml = '<th class="col-date">日期</th>';
             items.forEach(item => { thHtml += `<th class="col-std">${item.label}用量</th>`; });
-            bCols.forEach(col => {
-                thHtml += `<th class="col-b" style="background-color:#fce7f3; color:#831843 !important; border-left: 2px solid #fbcfe8;">[B系統] ${col}</th>`;
-            });
+            bCols.forEach(col => { thHtml += `<th class="col-std">${col}</th>`; }); // B 系統維持相同的藍色標準設計
 
             tabsContainer.innerHTML += `<button onclick="switchTab('tab-master')" id="btn-tab-master" class="nav-tab active">📊 ${currentMonth}/1-${currentMonth}/${daysInMonth} 用量總表</button>`;
 
@@ -561,7 +491,8 @@
                             <button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">📸 截圖分享 (10天)</button>
                         </div>
                     </div>
-                    <div class="table-container" id="masterTableContainer">
+                    
+                    <div class="table-container mb-6" id="masterTableContainer">
                         <table class="master-table" id="masterTable">
                             <thead><tr>${thHtml}</tr></thead>
                             <tbody id="masterTableBody"></tbody>
@@ -572,103 +503,36 @@
 
             items.forEach(item => {
                 if (['gas2', 'water_s', 'meng'].includes(item.id)) return;
-                let tabId = `tab-${item.id}`;
-                let tabLabel = item.label;
+                let tabId = `tab-${item.id}`; let tabLabel = item.label;
                 if (item.id === 'gas1') { tabId = 'tab-gas-combined'; tabLabel = '瓦斯1 / 瓦斯2'; } 
                 else if (item.id === 'water_l') { tabId = 'tab-water-combined'; tabLabel = '大支自來水 / 小支自來水'; } 
                 else if (item.id === 'soft_a') { tabId = 'tab-soft-meng-combined'; tabLabel = '大支軟水 / 錳砂'; }
                 tabsContainer.innerHTML += `<button onclick="switchTab('${tabId}')" id="btn-${tabId}" class="nav-tab">📋 ${tabLabel}</button>`;
 
                 let tableHead = ''; let tableBody = '';
-
                 if (item.type === 'time_oc') {
                     tableHead = `<tr><th style="width: 120px;">日期</th><th>開 (時間)</th><th>收 (時間)</th><th>今日用量</th></tr>`;
-                    tableBody = dates.map((dateStr, dIdx) => `
-                        <tr data-date-idx="${dIdx}">
-                            <td class="font-semibold bg-gray-50">${dateStr}</td>
-                            <td><input type="text" class="cell-input" id="${item.id}_s_${dIdx}" data-id="${item.id}_s_${dIdx}" oninput="calcMasterTable()" onblur="this.value=autoFormatTime(this.value); calcMasterTable()"></td>
-                            <td><input type="text" class="cell-input" id="${item.id}_e_${dIdx}" data-id="${item.id}_e_${dIdx}" oninput="handleCloseInput('${item.id}', ${dIdx})" onblur="this.value=autoFormatTime(this.value); calcMasterTable()"></td>
-                            <td id="usage_${item.id}_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td>
-                        </tr>`).join('');
+                    tableBody = dates.map((dateStr, dIdx) => `<tr data-date-idx="${dIdx}"><td class="font-semibold bg-gray-50">${dateStr}</td><td><input type="text" class="cell-input" id="${item.id}_s_${dIdx}" data-id="${item.id}_s_${dIdx}" oninput="calcMasterTable()" onblur="this.value=autoFormatTime(this.value); calcMasterTable()"></td><td><input type="text" class="cell-input" id="${item.id}_e_${dIdx}" data-id="${item.id}_e_${dIdx}" oninput="handleCloseInput('${item.id}', ${dIdx})" onblur="this.value=autoFormatTime(this.value); calcMasterTable()"></td><td id="usage_${item.id}_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td></tr>`).join('');
                 } else if (item.type === 'time_3') {
                     tableHead = `<tr><th style="width: 120px;">日期</th><th>低燃燒</th><th>中燃燒</th><th>高燃燒</th><th>今日用量</th></tr>`;
-                    tableBody = dates.map((dateStr, dIdx) => `
-                        <tr data-date-idx="${dIdx}">
-                            <td class="font-semibold bg-gray-50">${dateStr}</td>
-                            <td><input type="text" class="cell-input" id="${item.id}_low_${dIdx}" data-id="${item.id}_low_${dIdx}" oninput="calcMasterTable()" onblur="this.value=autoFormatTime(this.value); calcMasterTable()"></td>
-                            <td><input type="text" class="cell-input" id="${item.id}_mid_${dIdx}" data-id="${item.id}_mid_${dIdx}" oninput="calcMasterTable()" onblur="this.value=autoFormatTime(this.value); calcMasterTable()"></td>
-                            <td><input type="text" class="cell-input" id="${item.id}_high_${dIdx}" data-id="${item.id}_high_${dIdx}" oninput="calcMasterTable()" onblur="this.value=autoFormatTime(this.value); calcMasterTable()"></td>
-                            <td id="usage_${item.id}_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td>
-                        </tr>`).join('');
+                    tableBody = dates.map((dateStr, dIdx) => `<tr data-date-idx="${dIdx}"><td class="font-semibold bg-gray-50">${dateStr}</td><td><input type="text" class="cell-input" id="${item.id}_low_${dIdx}" data-id="${item.id}_low_${dIdx}" oninput="calcMasterTable()" onblur="this.value=autoFormatTime(this.value); calcMasterTable()"></td><td><input type="text" class="cell-input" id="${item.id}_mid_${dIdx}" data-id="${item.id}_mid_${dIdx}" oninput="calcMasterTable()" onblur="this.value=autoFormatTime(this.value); calcMasterTable()"></td><td><input type="text" class="cell-input" id="${item.id}_high_${dIdx}" data-id="${item.id}_high_${dIdx}" oninput="calcMasterTable()" onblur="this.value=autoFormatTime(this.value); calcMasterTable()"></td><td id="usage_${item.id}_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td></tr>`).join('');
                 } else if (item.type === 'dual') {
                     tableHead = `<tr><th style="width: 90px;">日期</th><th>A表讀數</th><th>B表讀數</th><th>A表用量</th><th>B表用量</th><th>每日總用量</th></tr>`;
-                    tableBody = dates.map((dateStr, dIdx) => `
-                        <tr data-date-idx="${dIdx}">
-                            <td class="font-semibold bg-gray-50 text-sm">${dateStr}</td>
-                            <td><input type="number" step="0.01" class="cell-input" id="${item.id}_a_${dIdx}" data-id="${item.id}_a_${dIdx}" oninput="calcMasterTable()"></td>
-                            <td><input type="number" step="0.01" class="cell-input" id="${item.id}_b_${dIdx}" data-id="${item.id}_b_${dIdx}" oninput="calcMasterTable()"></td>
-                            <td id="usage_${item.id}_a_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td>
-                            <td id="usage_${item.id}_b_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td>
-                            <td id="usage_${item.id}_total_${dIdx}" class="font-black text-emerald-700 bg-emerald-50">-</td>
-                        </tr>`).join('');
+                    tableBody = dates.map((dateStr, dIdx) => `<tr data-date-idx="${dIdx}"><td class="font-semibold bg-gray-50 text-sm">${dateStr}</td><td><input type="number" step="0.01" class="cell-input" id="${item.id}_a_${dIdx}" data-id="${item.id}_a_${dIdx}" oninput="calcMasterTable()"></td><td><input type="number" step="0.01" class="cell-input" id="${item.id}_b_${dIdx}" data-id="${item.id}_b_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_${item.id}_a_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td><td id="usage_${item.id}_b_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td><td id="usage_${item.id}_total_${dIdx}" class="font-black text-emerald-700 bg-emerald-50">-</td></tr>`).join('');
                 } else if (item.id === 'gas1') {
                     tableHead = `<tr><th style="width: 140px;">日期</th><th>瓦斯1讀數</th><th>瓦斯1用量</th><th>瓦斯2讀數</th><th>瓦斯2用量</th><th>總用量</th></tr>`;
-                    tableBody = dates.map((dateStr, dIdx) => `
-                        <tr data-date-idx="${dIdx}">
-                            <td class="font-semibold bg-gray-50">${dateStr}</td>
-                            <td><input type="number" step="0.01" class="cell-input" id="gas1_${dIdx}" data-id="gas1_${dIdx}" oninput="calcMasterTable()"></td>
-                            <td id="usage_gas1_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td>
-                            <td><input type="number" step="0.01" class="cell-input" id="gas2_${dIdx}" data-id="gas2_${dIdx}" oninput="calcMasterTable()"></td>
-                            <td id="usage_gas2_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td>
-                            <td id="usage_gas_total_${dIdx}" class="font-black text-emerald-700 bg-emerald-50">-</td>
-                        </tr>`).join('');
+                    tableBody = dates.map((dateStr, dIdx) => `<tr data-date-idx="${dIdx}"><td class="font-semibold bg-gray-50">${dateStr}</td><td><input type="number" step="0.01" class="cell-input" id="gas1_${dIdx}" data-id="gas1_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_gas1_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td><td><input type="number" step="0.01" class="cell-input" id="gas2_${dIdx}" data-id="gas2_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_gas2_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td><td id="usage_gas_total_${dIdx}" class="font-black text-emerald-700 bg-emerald-50">-</td></tr>`).join('');
                 } else if (item.id === 'water_l') {
                     tableHead = `<tr><th style="width:140px;">日期</th><th>大自來水讀數</th><th>大自來水用量</th><th>小自來水讀數</th><th>小自來水用量</th></tr>`;
-                    tableBody = dates.map((dateStr, dIdx) => `
-                        <tr data-date-idx="${dIdx}">
-                            <td class="font-semibold bg-gray-50">${dateStr}</td>
-                            <td><input type="number" step="0.01" class="cell-input" id="water_l_${dIdx}" data-id="water_l_${dIdx}" oninput="calcMasterTable()"></td>
-                            <td id="usage_water_l_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td>
-                            <td><input type="number" step="0.01" class="cell-input" id="water_s_${dIdx}" data-id="water_s_${dIdx}" oninput="calcMasterTable()"></td>
-                            <td id="usage_water_s_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td>
-                        </tr>`).join('');
+                    tableBody = dates.map((dateStr, dIdx) => `<tr data-date-idx="${dIdx}"><td class="font-semibold bg-gray-50">${dateStr}</td><td><input type="number" step="0.01" class="cell-input" id="water_l_${dIdx}" data-id="water_l_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_water_l_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td><td><input type="number" step="0.01" class="cell-input" id="water_s_${dIdx}" data-id="water_s_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_water_s_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td></tr>`).join('');
                 } else if (item.id === 'soft_a') {
                     tableHead = `<tr><th style="width:140px;">日期</th><th>大軟水讀數</th><th>大軟水用量</th><th>錳砂讀數</th><th>錳砂用量</th></tr>`;
-                    tableBody = dates.map((dateStr, dIdx) => `
-                        <tr data-date-idx="${dIdx}">
-                            <td class="font-semibold bg-gray-50">${dateStr}</td>
-                            <td><input type="number" step="0.01" class="cell-input" id="soft_a_${dIdx}" data-id="soft_a_${dIdx}" oninput="calcMasterTable()"></td>
-                            <td id="usage_soft_a_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td>
-                            <td><input type="number" step="0.01" class="cell-input" id="meng_${dIdx}" data-id="meng_${dIdx}" oninput="calcMasterTable()"></td>
-                            <td id="usage_meng_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td>
-                        </tr>`).join('');
+                    tableBody = dates.map((dateStr, dIdx) => `<tr data-date-idx="${dIdx}"><td class="font-semibold bg-gray-50">${dateStr}</td><td><input type="number" step="0.01" class="cell-input" id="soft_a_${dIdx}" data-id="soft_a_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_soft_a_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td><td><input type="number" step="0.01" class="cell-input" id="meng_${dIdx}" data-id="meng_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_meng_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td></tr>`).join('');
                 } else {
                     tableHead = `<tr><th style="width: 120px;">日期</th><th>當日讀數</th><th>今日用量</th></tr>`;
-                    tableBody = dates.map((dateStr, dIdx) => `
-                        <tr data-date-idx="${dIdx}">
-                            <td class="font-semibold bg-gray-50">${dateStr}</td>
-                            <td><input type="number" step="0.01" class="cell-input" id="${item.id}_${dIdx}" data-id="${item.id}_${dIdx}" oninput="calcMasterTable()"></td>
-                            <td id="usage_${item.id}_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td>
-                        </tr>`).join('');
+                    tableBody = dates.map((dateStr, dIdx) => `<tr data-date-idx="${dIdx}"><td class="font-semibold bg-gray-50">${dateStr}</td><td><input type="number" step="0.01" class="cell-input" id="${item.id}_${dIdx}" data-id="${item.id}_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_${item.id}_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td></tr>`).join('');
                 }
-
-                contentContainer.innerHTML += `
-                    <div id="${tabId}" class="tab-content bg-white p-4 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0">
-                        <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
-                            <h2 class="text-xl font-bold text-blue-800">📌 ${item.id === 'gas1' ? '瓦斯1 / 瓦斯2' : item.id === 'water_l' ? '大支自來水 / 小支自來水' : item.id === 'soft_a' ? '大支軟水 / 錳砂' : item.label} - 每日度數紀錄</h2>
-                            <div class="flex flex-wrap gap-2 print-hide">
-                                <button onclick="syncDataToCloud()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">☁️ 儲存至雲端</button>
-                                <button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">📸 截圖分享 (10天)</button>
-                            </div>
-                        </div>
-                        <div class="table-container">
-                            <table class="fixed-table">
-                                <thead>${tableHead}</thead>
-                                <tbody>${tableBody}</tbody>
-                            </table>
-                        </div>
-                    </div>
-                `;
+                contentContainer.innerHTML += `<div id="${tabId}" class="tab-content bg-white p-4 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0"><div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4"><h2 class="text-xl font-bold text-blue-800">📌 ${item.id === 'gas1' ? '瓦斯1 / 瓦斯2' : item.id === 'water_l' ? '大支自來水 / 小支自來水' : item.id === 'soft_a' ? '大支軟水 / 錳砂' : item.label} - 每日度數紀錄</h2><div class="flex flex-wrap gap-2 print-hide"><button onclick="syncDataToCloud()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">☁️ 儲存至雲端</button><button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">📸 截圖分享 (10天)</button></div></div><div class="table-container"><table class="fixed-table"><thead>${tableHead}</thead><tbody>${tableBody}</tbody></table></div></div>`;
             });
             calcMasterTable();
         }
@@ -685,9 +549,7 @@
             const closeVal = document.getElementById(`${itemId}_e_${dIdx}`).value;
             if (dIdx + 1 < dates.length) {
                 const nextOpenInput = document.getElementById(`${itemId}_s_${dIdx + 1}`);
-                if (nextOpenInput && (!nextOpenInput.value || nextOpenInput.value.trim() === '')) {
-                    nextOpenInput.value = closeVal;
-                }
+                if (nextOpenInput && (!nextOpenInput.value || nextOpenInput.value.trim() === '')) nextOpenInput.value = closeVal;
             }
             calcMasterTable();
         }
@@ -730,45 +592,37 @@
                         rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
                     } else if (item.type === 'time_3') {
                         let totalMins = null;
-                        ['low', 'mid', 'high'].forEach(state => {
-                            let val = getRawUsage(`${item.id}_${state}`, dIdx, true);
-                            if (val !== null) totalMins = (totalMins || 0) + val;
-                        });
+                        ['low', 'mid', 'high'].forEach(state => { let val = getRawUsage(`${item.id}_${state}`, dIdx, true); if (val !== null) totalMins = (totalMins || 0) + val; });
                         let usage = totalMins !== null ? minsToTime(totalMins) : '-';
                         if (document.getElementById(`usage_${item.id}_${dIdx}`)) document.getElementById(`usage_${item.id}_${dIdx}`).innerText = usage;
                         rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
                     } else if (item.type === 'dual') {
-                        let currA = document.getElementById(`${item.id}_a_${dIdx}`)?.value;
-                        let currB = document.getElementById(`${item.id}_b_${dIdx}`)?.value;
-                        let nextA = document.getElementById(`${item.id}_a_${dIdx + 1}`)?.value;
-                        let nextB = document.getElementById(`${item.id}_b_${dIdx + 1}`)?.value;
+                        let currA = document.getElementById(`${item.id}_a_${dIdx}`)?.value; let currB = document.getElementById(`${item.id}_b_${dIdx}`)?.value;
+                        let nextA = document.getElementById(`${item.id}_a_${dIdx + 1}`)?.value; let nextB = document.getElementById(`${item.id}_b_${dIdx + 1}`)?.value;
                         let diffA = getTankUsage(currA, nextA); let diffB = getTankUsage(currB, nextB);
-
                         if(document.getElementById(`usage_${item.id}_a_${dIdx}`)) document.getElementById(`usage_${item.id}_a_${dIdx}`).innerText = diffA !== null ? diffA.toFixed(2) : '-';
                         if(document.getElementById(`usage_${item.id}_b_${dIdx}`)) document.getElementById(`usage_${item.id}_b_${dIdx}`).innerText = diffB !== null ? diffB.toFixed(2) : '-';
-
                         let totalVal = null;
                         if (diffA !== null || diffB !== null) totalVal = (diffA || 0) + (diffB || 0);
                         let usage = totalVal !== null ? totalVal.toFixed(2) : '-';
                         if (document.getElementById(`usage_${item.id}_total_${dIdx}`)) document.getElementById(`usage_${item.id}_total_${dIdx}`).innerText = usage;
                         rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
                     } else {
-                        let diff = getRawUsage(item.id, dIdx, false);
-                        let usage = diff !== null ? diff.toFixed(2) : '-';
+                        let diff = getRawUsage(item.id, dIdx, false); let usage = diff !== null ? diff.toFixed(2) : '-';
                         if (document.getElementById(`usage_${item.id}_${dIdx}`)) document.getElementById(`usage_${item.id}_${dIdx}`).innerText = usage;
                         rowHtml += `<td class="col-std font-bold text-blue-600 bg-blue-50/50">${usage}</td>`;
                     }
                 });
-
+                
                 const gas1Usage = getRawUsage('gas1', dIdx, false); const gas2Usage = getRawUsage('gas2', dIdx, false);
                 const gasTotalTd = document.getElementById(`usage_gas_total_${dIdx}`);
                 if (gasTotalTd) gasTotalTd.innerText = (gas1Usage !== null || gas2Usage !== null) ? ((gas1Usage || 0) + (gas2Usage || 0)).toFixed(2) : '-';
-
-                // --- 修改點：把 B 系統傳過來的數據塞入表格右側 ---
+                
+                // B 系統直接加在同一列右側
                 bCols.forEach(col => {
                     let bVal = originalCloudData[`B_${col}_${dIdx}`];
                     if (bVal === undefined || bVal === '') bVal = '-';
-                    rowHtml += `<td class="col-b font-bold text-pink-700 bg-pink-50/40" style="border-left: 1px solid #fbcfe8;">${bVal}</td>`;
+                    rowHtml += `<td class="col-std font-bold text-gray-700 bg-gray-50/40">${bVal}</td>`;
                 });
 
                 rowHtml += `</tr>`;
@@ -778,30 +632,19 @@
 
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
+            const toast = document.createElement('div'); toast.className = `toast ${type}`;
             let icon = type === 'success' ? '✅' : (type === 'loading' ? '⏳' : '⚠️');
-            toast.innerHTML = `${icon} ${message}`;
-            container.appendChild(toast);
+            toast.innerHTML = `${icon} ${message}`; container.appendChild(toast);
             requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('show')));
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 300);
-            }, type === 'error' ? 5000 : 3000);
+            setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, type === 'error' ? 5000 : 3000);
         }
 
-        function showLoading(text) {
-            document.getElementById('loading-text').innerText = text;
-            document.getElementById('loading-overlay').style.display = 'flex';
-        }
-        function hideLoading() {
-            document.getElementById('loading-overlay').style.display = 'none';
-        }
+        function showLoading(text) { document.getElementById('loading-text').innerText = text; document.getElementById('loading-overlay').style.display = 'flex'; }
+        function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
 
         async function takeScreenshot() {
             const activeTab = document.querySelector('.tab-content.active');
             if (!activeTab) return;
-
             showToast('正在產生 10 天份報表圖片...', 'loading');
 
             try {
@@ -820,10 +663,7 @@
                 const title = document.createElement('div');
                 const sourceTitle = activeTab.querySelector('h2');
                 title.textContent = sourceTitle ? sourceTitle.innerText : '每日用量紀錄';
-                title.style.cssText = `
-                    font-size: 30px; line-height: 1.25; font-weight: 800;
-                    color: #1e3a8a; margin: 0 0 20px 4px; white-space: nowrap;
-                `;
+                title.style.cssText = `font-size: 30px; line-height: 1.25; font-weight: 800; color: #1e3a8a; margin: 0 0 20px 4px; white-space: nowrap;`;
                 report.appendChild(title);
 
                 const table = sourceTable.cloneNode(true);
@@ -839,39 +679,27 @@
                     const value = originalInput ? originalInput.value : cloneInput.value;
                     const text = document.createElement('span');
                     text.textContent = value || '';
-                    text.style.cssText = `
-                        display:flex; align-items:center; justify-content:center;
-                        width:100%; min-height:38px; box-sizing:border-box;
-                        font-size:18px; color:#111827; white-space:nowrap;
-                    `;
+                    text.style.cssText = `display:flex; align-items:center; justify-content:center; width:100%; min-height:38px; box-sizing:border-box; font-size:18px; color:#111827; white-space:nowrap;`;
                     cloneInput.replaceWith(text);
                 });
 
                 const colCount = table.querySelectorAll('thead th').length || 1;
                 const dateWidth = 190;
-                const otherWidth = sourceTable.classList.contains('master-table') ? 135 : 210;
+                const otherWidth = 140; 
                 const tableWidth = dateWidth + Math.max(0, colCount - 1) * otherWidth;
+                
                 report.style.width = `${tableWidth + 60}px`;
-
-                table.style.cssText = `
-                    width:${tableWidth}px; min-width:${tableWidth}px; max-width:none;
-                    table-layout:fixed; border-collapse:collapse; border-spacing:0;
-                    background:#fff; margin:0; box-shadow:none; border-radius:0;
-                `;
+                table.style.cssText = `width:${tableWidth}px; min-width:${tableWidth}px; max-width:none; table-layout:fixed; border-collapse:collapse; border-spacing:0; background:#fff; margin:0; box-shadow:none; border-radius:0;`;
 
                 table.querySelectorAll('th, td').forEach((cell, index) => {
-                    cell.style.position = 'static';
-                    cell.style.left = 'auto'; cell.style.top = 'auto';
-                    cell.style.height = '58px'; cell.style.padding = '8px 10px';
-                    cell.style.boxSizing = 'border-box'; cell.style.border = '1px solid #cbd5e1';
-                    cell.style.textAlign = 'center'; cell.style.verticalAlign = 'middle';
-                    cell.style.overflow = 'visible'; cell.style.textOverflow = 'clip';
-                    cell.style.whiteSpace = 'nowrap'; cell.style.fontSize = '18px';
+                    cell.style.position = 'static'; cell.style.left = 'auto'; cell.style.top = 'auto';
+                    cell.style.height = '58px'; cell.style.padding = '8px 10px'; cell.style.boxSizing = 'border-box';
+                    cell.style.border = '1px solid #cbd5e1'; cell.style.textAlign = 'center'; cell.style.verticalAlign = 'middle';
+                    cell.style.overflow = 'visible'; cell.style.textOverflow = 'clip'; cell.style.whiteSpace = 'nowrap'; cell.style.fontSize = '18px';
                 });
 
                 table.querySelectorAll('thead th').forEach(th => {
-                    th.style.background = th.innerText.includes('[B系統]') ? '#fce7f3' : '#bfdbfe';
-                    th.style.color = th.innerText.includes('[B系統]') ? '#831843' : '#1e3a8a';
+                    th.style.background = '#bfdbfe'; th.style.color = '#1e3a8a';
                     th.style.fontWeight = '800'; th.style.fontSize = '19px';
                 });
 
@@ -880,13 +708,10 @@
                     if (first) {
                         first.style.width = `${dateWidth}px`; first.style.minWidth = `${dateWidth}px`;
                         first.style.maxWidth = `${dateWidth}px`; first.style.fontWeight = '700';
-                        first.style.whiteSpace = 'nowrap'; first.style.overflow = 'visible';
-                        first.style.textOverflow = 'clip';
+                        first.style.whiteSpace = 'nowrap'; first.style.overflow = 'visible'; first.style.textOverflow = 'clip';
                     }
                     for (let i = 1; i < row.children.length; i++) {
-                        row.children[i].style.width = `${otherWidth}px`;
-                        row.children[i].style.minWidth = `${otherWidth}px`;
-                        row.children[i].style.maxWidth = `${otherWidth}px`;
+                        row.children[i].style.width = `${otherWidth}px`; row.children[i].style.minWidth = `${otherWidth}px`; row.children[i].style.maxWidth = `${otherWidth}px`;
                     }
                 });
 
@@ -903,16 +728,10 @@
                     let fileTitle = sourceTitle ? sourceTitle.innerText.replace(/[📅📌\s]/g, '').split('-')[0] : '用量表';
                     const fileName = `${fileTitle}_${startDateStr}至${endDateStr}.jpg`.replace(/\//g, '');
                     const file = new File([blob], fileName, { type: 'image/jpeg' });
-
                     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                        try {
-                            await navigator.share({ files: [file], title: fileName, text: fileName });
-                            showToast('✅ 成功開啟分享選單！', 'success');
-                        } catch (error) { if (error.name !== 'AbortError') downloadFallback(blob, fileName); }
-                    } else {
-                        downloadFallback(blob, fileName);
-                        showToast('📥 報表圖片已產生！', 'success');
-                    }
+                        try { await navigator.share({ files: [file], title: fileName, text: fileName }); showToast('✅ 成功開啟分享選單！', 'success'); } 
+                        catch (error) { if (error.name !== 'AbortError') downloadFallback(blob, fileName); }
+                    } else { downloadFallback(blob, fileName); showToast('📥 報表圖片已產生！', 'success'); }
                 }, 'image/jpeg', 0.95);
 
             } catch (error) {
