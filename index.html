@@ -100,7 +100,7 @@
             z-index: 15; 
             background-color: #93c5fd; 
         }
-        table.master-table .col-std { width: 100px; min-width: 100px; max-width: 100px; }
+        table.master-table .col-std { width: 110px; min-width: 110px; max-width: 110px; } /* 稍微加寬讓標題不擠 */
 
         input.cell-input {
             width: 100%; max-width: 78px; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px;
@@ -253,8 +253,8 @@
             { id: 'meng', label: '猛砂', type: 'normal' }
         ];
 
-        // B 系統欄位：請確保這裡的字眼跟 Google 表格裡的標題 100% 一模一樣，否則會抓不到資料
-        const bCols = ["開機時間", "關機時間", "平面數量", "枕套數量", "員工簽名圖檔", "機台名稱", "單一總數量(其他)", "1號機(撐開)", "2號機(撐開)", "3號機(撐開)", "4號機(撐開)", "上班人數(撐開 )", "單日總量 (撐開)", "床被(撐開)", "檯布(撐開)"];
+        // ★ B 系統只列出這 5 個總量標題，直接接在 A 總表右側
+        const bCols = ["ICC平燙機用量", "TF-30K用量", "TB-60K用量", "TB-80K用量", "撐開機用量"];
 
         let activeFieldItem = null;
         let originalCloudData = {}; 
@@ -474,10 +474,11 @@
             const contentContainer = document.getElementById('tabsContentContainer');
             tabsContainer.innerHTML = ''; contentContainer.innerHTML = '';
 
-            // 完美合併：將 A 系統與 B 系統的標題全部接續在同一個表頭 (同一列) 中
             let thHtml = '<th class="col-date">日期</th>';
             items.forEach(item => { thHtml += `<th class="col-std">${item.label}用量</th>`; });
-            bCols.forEach(col => { thHtml += `<th class="col-std">${col}</th>`; }); // B 系統維持相同的藍色標準設計
+            
+            // ★ 只加入 5 個 B 系統標題
+            bCols.forEach(col => { thHtml += `<th class="col-std">${col}</th>`; }); 
 
             tabsContainer.innerHTML += `<button onclick="switchTab('tab-master')" id="btn-tab-master" class="nav-tab active">📊 ${currentMonth}/1-${currentMonth}/${daysInMonth} 用量總表</button>`;
 
@@ -618,7 +619,7 @@
                 const gasTotalTd = document.getElementById(`usage_gas_total_${dIdx}`);
                 if (gasTotalTd) gasTotalTd.innerText = (gas1Usage !== null || gas2Usage !== null) ? ((gas1Usage || 0) + (gas2Usage || 0)).toFixed(2) : '-';
                 
-                // B 系統直接加在同一列右側
+                // ★ B 系統直接加在同一列右側 (5個)
                 bCols.forEach(col => {
                     let bVal = originalCloudData[`B_${col}_${dIdx}`];
                     if (bVal === undefined || bVal === '') bVal = '-';
