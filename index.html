@@ -100,7 +100,7 @@
             z-index: 15; 
             background-color: #93c5fd; 
         }
-        table.master-table .col-std { width: 110px; min-width: 110px; max-width: 110px; } /* 稍微加寬讓標題不擠 */
+        table.master-table .col-std { width: 110px; min-width: 110px; max-width: 110px; }
 
         input.cell-input {
             width: 100%; max-width: 78px; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px;
@@ -229,15 +229,21 @@
         const currentMonth = today.getMonth() + 1; 
         
         const daysInMonth = new Date(today.getFullYear(), currentMonth, 0).getDate();
+        const weekdays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
         
+        // 產生本月日期陣列
         for (let d = 1; d <= daysInMonth; d++) {
             const dayStr = d < 10 ? `0${d}` : `${d}`;
-            const weekdays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
             const dateObj = new Date(today.getFullYear(), today.getMonth(), d);
             const wday = weekdays[dateObj.getDay()];
             const monthStr = currentMonth < 10 ? `0${currentMonth}` : `${currentMonth}`;
             dates.push(`${monthStr}/${dayStr} (${wday})`);
         }
+
+        // 🔥 新增：強制補上「下個月 1 號」，讓軟水月底跨月有格子可以填！
+        const nextMonthObj = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+        const nmStr = (nextMonthObj.getMonth() + 1).toString().padStart(2, '0');
+        dates.push(`${nmStr}/01 (${weekdays[nextMonthObj.getDay()]}) [次月1號]`);
         
         const titleText = `${currentYear}年${currentMonth}月份`;
 
@@ -253,7 +259,6 @@
             { id: 'meng', label: '猛砂', type: 'normal' }
         ];
 
-        // ★ B 系統只列出這 5 個總量標題，直接接在 A 總表右側
         const bCols = ["ICC平燙機用量", "TF-30K用量", "TB-60K用量", "TB-80K用量", "撐開機用量"];
 
         let activeFieldItem = null;
@@ -408,11 +413,15 @@
             const selectEl = document.getElementById('fieldTargetDate'); selectEl.innerHTML = '';
             dates.forEach((dStr, idx) => { selectEl.innerHTML += `<option value="${idx}">${dStr}</option>`; });
             const td = new Date(); let todayIdx = td.getDate() - 1; 
+            
+            // 軟水自動往後跳一格
             if (item.type === 'dual') todayIdx += 1;
             if (todayIdx >= dates.length) todayIdx = dates.length - 1;
             if (todayIdx < 0) todayIdx = 0;
+            
             selectEl.value = todayIdx;
             const container = document.getElementById('field-inputs-container');
+            
             if (item.type === 'time_oc') {
                 container.innerHTML = `<label class="block text-sm font-bold text-gray-700 mb-1">📝 輸入收 (時間讀數) [自動連動隔天開]:</label><input type="text" id="fieldVal_e" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30">`;
             } else if (item.type === 'time_3') {
@@ -476,8 +485,6 @@
 
             let thHtml = '<th class="col-date">日期</th>';
             items.forEach(item => { thHtml += `<th class="col-std">${item.label}用量</th>`; });
-            
-            // ★ 只加入 5 個 B 系統標題
             bCols.forEach(col => { thHtml += `<th class="col-std">${col}</th>`; }); 
 
             tabsContainer.innerHTML += `<button onclick="switchTab('tab-master')" id="btn-tab-master" class="nav-tab active">📊 ${currentMonth}/1-${currentMonth}/${daysInMonth} 用量總表</button>`;
@@ -583,7 +590,6 @@
             dates.forEach((dateStr, dIdx) => {
                 let rowHtml = `<tr data-date-idx="${dIdx}"><td class="col-date">${dateStr}</td>`;
                 
-                // A 系統原本的數據
                 items.forEach(item => {
                     if (item.type === 'time_oc') {
                         const openVal = timeToMins(document.getElementById(`${item.id}_s_${dIdx}`)?.value);
@@ -619,7 +625,6 @@
                 const gasTotalTd = document.getElementById(`usage_gas_total_${dIdx}`);
                 if (gasTotalTd) gasTotalTd.innerText = (gas1Usage !== null || gas2Usage !== null) ? ((gas1Usage || 0) + (gas2Usage || 0)).toFixed(2) : '-';
                 
-                // ★ B 系統直接加在同一列右側 (5個)
                 bCols.forEach(col => {
                     let bVal = originalCloudData[`B_${col}_${dIdx}`];
                     if (bVal === undefined || bVal === '') bVal = '-';
