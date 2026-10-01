@@ -8,112 +8,32 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, 'Microsoft JhengHei';
-            background-color: #f3f4f6;
-        }
-
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, 'Microsoft JhengHei'; background-color: #f3f4f6; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         
-        .nav-tabs-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-            margin-top: 10px;
-            padding-left: 10px;
-            border-bottom: 2px solid #cbd5e1;
-        }
-        
-        .nav-tab {
-            transition: all 0.2s ease;
-            background-color: #f1f5f9;
-            border: 1px solid #cbd5e1;
-            border-bottom: none;
-            color: #475569;
-            padding: 8px 16px;
-            border-radius: 6px 6px 0 0;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-        }
-        
+        .nav-tabs-container { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; padding-left: 10px; border-bottom: 2px solid #cbd5e1; }
+        .nav-tab { transition: all 0.2s ease; background-color: #f1f5f9; border: 1px solid #cbd5e1; border-bottom: none; color: #475569; padding: 8px 16px; border-radius: 6px 6px 0 0; font-weight: 600; font-size: 14px; cursor: pointer; }
         .nav-tab:hover { background-color: #e2e8f0; }
-        
-        .nav-tab.active {
-            background-color: white;
-            color: #2563eb;
-            font-weight: 700;
-            border-top: 3px solid #2563eb;
-            border-left: 1px solid #cbd5e1;
-            border-right: 1px solid #cbd5e1;
-            margin-bottom: -2px; 
-            padding-bottom: 10px;
-            box-shadow: 0 -2px 4px rgba(0,0,0,0.05);
-        }
+        .nav-tab.active { background-color: white; color: #2563eb; font-weight: 700; border-top: 3px solid #2563eb; border-left: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; margin-bottom: -2px; padding-bottom: 10px; box-shadow: 0 -2px 4px rgba(0,0,0,0.05); }
 
-        .table-container {
-            max-height: calc(100vh - 240px);
-            overflow: auto;
-            background: white;
-            border-radius: 0 8px 8px 8px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            border: 1px solid #cbd5e1;
-            border-top: none;
-            position: relative; 
-        }
-
+        .table-container { max-height: calc(100vh - 240px); overflow: auto; background: white; border-radius: 0 8px 8px 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #cbd5e1; border-top: none; position: relative; }
         table.fixed-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        table.fixed-table th, table.fixed-table td {
-            border: 1px solid #cbd5e1;
-            text-align: center;
-            vertical-align: middle;
-            padding: 6px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        
-        table.fixed-table th {
-            position: sticky; top: 0; background-color: #bfdbfe; color: #1e3a8a !important;
-            font-weight: 800 !important; font-size: 14px; z-index: 10; padding: 10px 4px;
-            box-shadow: inset 0 -1px 0 #cbd5e1; 
-        }
+        table.fixed-table th, table.fixed-table td { border: 1px solid #cbd5e1; text-align: center; vertical-align: middle; padding: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        table.fixed-table th { position: sticky; top: 0; background-color: #bfdbfe; color: #1e3a8a !important; font-weight: 800 !important; font-size: 14px; z-index: 10; padding: 10px 4px; box-shadow: inset 0 -1px 0 #cbd5e1; }
 
         table.master-table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
-        table.master-table th, table.master-table td {
-            border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1;
-            text-align: center; vertical-align: middle; padding: 4px; box-sizing: border-box;
-        }
-        
-        table.master-table th {
-            position: sticky; top: 0; background-color: #bfdbfe; color: #1e3a8a !important;
-            font-weight: 800 !important; font-size: 13px; z-index: 10; white-space: nowrap; padding: 10px 4px;
-            box-shadow: inset 0 -1px 0 #cbd5e1;
-        }
-        
-        table.master-table th.col-date, table.master-table td.col-date {
-            width: 110px; min-width: 110px; max-width: 110px; position: sticky; left: 0;
-            background-color: #f1f5f9; z-index: 5; font-weight: 600;
-        }
-        table.master-table th.col-date { 
-            z-index: 15; 
-            background-color: #93c5fd; 
-        }
+        table.master-table th, table.master-table td { border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; text-align: center; vertical-align: middle; padding: 4px; box-sizing: border-box; }
+        table.master-table th { position: sticky; top: 0; background-color: #bfdbfe; color: #1e3a8a !important; font-weight: 800 !important; font-size: 13px; z-index: 10; white-space: nowrap; padding: 10px 4px; box-shadow: inset 0 -1px 0 #cbd5e1; }
+        table.master-table th.col-date, table.master-table td.col-date { width: 110px; min-width: 110px; max-width: 110px; position: sticky; left: 0; background-color: #f1f5f9; z-index: 5; font-weight: 600; }
+        table.master-table th.col-date { z-index: 15; background-color: #93c5fd; }
         table.master-table .col-std { width: 110px; min-width: 110px; max-width: 110px; }
 
-        input.cell-input {
-            width: 100%; max-width: 78px; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px;
-            text-align: center; font-size: 13px; background-color: #ffffff; margin: 0 auto; display: block;
-        }
+        input.cell-input { width: 100%; max-width: 78px; padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: center; font-size: 13px; background-color: #ffffff; margin: 0 auto; display: block; }
         input.cell-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2); background-color: #eff6ff; }
 
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
-        .toast {
-            background-color: #333; color: white; padding: 12px 24px; border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px;
-            transform: translateX(120%); transition: transform 0.3s ease-out; font-weight: 600;
-        }
+        .toast { background-color: #333; color: white; padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px; transform: translateX(120%); transition: transform 0.3s ease-out; font-weight: 600; }
         .toast.show { transform: translateX(0); }
         .toast.success { background-color: #10b981; }
         .toast.error { background-color: #ef4444; }
@@ -125,28 +45,16 @@
 
         body.capturing .print-hide { display: none !important; }
         body.capturing .hide-row { display: none !important; } 
-        body.capturing .table-container {
-            max-height: none !important; 
-            overflow: visible !important;
-        }
+        body.capturing .table-container { max-height: none !important; overflow: visible !important; }
         body.capturing table.fixed-table th { position: static !important; }
-        body.capturing table.master-table th, 
-        body.capturing table.master-table td.col-date { position: static !important; }
+        body.capturing table.master-table th, body.capturing table.master-table td.col-date { position: static !important; }
 
         @media print {
             body { background-color: white; }
             nav, #mainContainer, #toast-container { display: none !important; }
-            
-            #qrModal { 
-                position: relative !important; display: block !important; 
-                background: white !important; backdrop-filter: none !important; padding: 0 !important;
-            }
+            #qrModal { position: relative !important; display: block !important; background: white !important; backdrop-filter: none !important; padding: 0 !important; }
             #qrModal > div { box-shadow: none !important; max-width: 100% !important; max-height: none !important; padding: 0 !important; }
-            
-            #qrPrintArea { 
-                border: none !important; background: white !important; overflow: visible !important; 
-                display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 20px;
-            }
+            #qrPrintArea { border: none !important; background: white !important; overflow: visible !important; display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 20px; }
             .print-hide { display: none !important; }
             #qrPrintArea > div { page-break-inside: avoid; border: 2px dashed #ccc; }
         }
@@ -158,23 +66,24 @@
         <div class="spinner mb-4"></div>
         <p class="text-lg font-bold text-blue-600" id="loading-text">雲端資料同步中...</p>
     </div>
-
     <div id="toast-container"></div>
 
     <nav class="bg-white shadow-sm border-b border-gray-200" id="mainNav">
         <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16 items-center">
+            <div class="flex justify-between h-16 items-center flex-wrap gap-2 py-2">
                 <div class="flex items-center gap-2">
                     <div class="bg-blue-600 p-2 rounded-lg text-white">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                     </div>
                     <span class="font-bold text-xl text-gray-800" id="system-title-nav">智慧收尾用量系統</span>
                 </div>
-                <div>
+                
+                <div class="flex items-center gap-2 print-hide">
+                    <!-- 🔥 這裡新增了歷史月份選擇器 -->
+                    <input type="month" id="monthSelector" class="border-2 border-blue-300 rounded-lg p-1.5 text-sm font-bold text-blue-700 bg-blue-50 focus:outline-none focus:border-blue-500 cursor-pointer" onchange="loadTargetMonth(this.value)">
+                    
                     <button onclick="fetchDataFromCloud()" class="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-lg shadow-sm text-sm font-bold flex items-center gap-1 transition-colors">
-                        🔄 抓取最新資料
+                        🔄 同步資料
                     </button>
                 </div>
             </div>
@@ -208,44 +117,23 @@
             <button onclick="closeQrModal()" class="print-hide absolute top-4 right-4 text-gray-400 hover:text-gray-800 text-3xl font-bold">&times;</button>
             <div class="print-hide flex justify-between items-center mb-6 border-b pb-4">
                 <h2 class="text-2xl font-bold text-gray-800">🖨️ 設備 QR Code 列印清單</h2>
-                <button onclick="window.print()" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700">
-                    開始列印 (A4)
-                </button>
+                <button onclick="window.print()" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700">開始列印 (A4)</button>
             </div>
             <p class="print-hide text-sm text-gray-500 mb-4">系統已自動為每個設備建立專屬 QR Code，列印後裁切即可貼在現場。</p>
-            
-            <div id="qrPrintArea" class="grid grid-cols-2 md:grid-cols-3 gap-6 overflow-y-auto p-4 bg-gray-50 rounded-lg">
-            </div>
+            <div id="qrPrintArea" class="grid grid-cols-2 md:grid-cols-3 gap-6 overflow-y-auto p-4 bg-gray-50 rounded-lg"></div>
         </div>
     </div>
 
     <script>
-        // ⚠️ 請確認這是妳最新的 API 網址
+        // ⚠️ 記得把這個網址換成妳最新的 API！
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwG9LD9FeEgm8CH2zum0XYQRRqj9X1Hgf3CfBsj5rdUb_mH1RkI9gq-g4WmpnLTZMJ3vQ/exec'; 
 
-        const dates = [];
-        const today = new Date();
-        const currentYear = today.getFullYear() - 1911; 
-        const currentMonth = today.getMonth() + 1; 
-        
-        const daysInMonth = new Date(today.getFullYear(), currentMonth, 0).getDate();
-        const weekdays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
-        
-        // 產生本月日期陣列
-        for (let d = 1; d <= daysInMonth; d++) {
-            const dayStr = d < 10 ? `0${d}` : `${d}`;
-            const dateObj = new Date(today.getFullYear(), today.getMonth(), d);
-            const wday = weekdays[dateObj.getDay()];
-            const monthStr = currentMonth < 10 ? `0${currentMonth}` : `${currentMonth}`;
-            dates.push(`${monthStr}/${dayStr} (${wday})`);
-        }
-
-        // 🔥 新增：強制補上「下個月 1 號」，讓軟水月底跨月有格子可以填！
-        const nextMonthObj = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-        const nmStr = (nextMonthObj.getMonth() + 1).toString().padStart(2, '0');
-        dates.push(`${nmStr}/01 (${weekdays[nextMonthObj.getDay()]}) [次月1號]`);
-        
-        const titleText = `${currentYear}年${currentMonth}月份`;
+        // 全域變數改為 let，讓月份可以自由切換
+        let dates = [];
+        let currentYear, currentMonth, daysInMonth, titleText;
+        let currentQueryMonth = ""; 
+        let activeFieldItem = null;
+        let originalCloudData = {}; 
 
         const items = [
             { id: 'boiler1', label: '蒸氣高燃鍋爐', type: 'time_oc' },
@@ -258,15 +146,14 @@
             { id: 'soft_ab', label: '小支軟水A/B', type: 'dual' },
             { id: 'meng', label: '猛砂', type: 'normal' }
         ];
-
         const bCols = ["ICC平燙機用量", "TF-30K用量", "TB-60K用量", "TB-80K用量", "撐開機用量"];
 
-        let activeFieldItem = null;
-        let originalCloudData = {}; 
-
         window.onload = () => {
-            document.title = `智慧收尾用量系統 - ${titleText}`;
-            document.getElementById('system-title-nav').innerHTML = `智慧收尾用量系統 <span class="text-sm font-normal text-gray-500 ml-2">(${titleText})</span>`;
+            const today = new Date();
+            const defaultMonthStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+            
+            // 初始化為當前真實月份
+            initCalendar(defaultMonthStr);
             
             const urlParams = new URLSearchParams(window.location.search);
             const qrParam = urlParams.get('qr');
@@ -281,14 +168,56 @@
                 }
             }
 
-            buildTabsAndViews();
-            if (SCRIPT_URL === '請將您部署後的_Google_Apps_Script_網址貼在這裡') {
+            if (SCRIPT_URL.includes('請將您部署後的')) {
                 showToast('請務必在程式碼中設定 API 網址才能儲存！', 'error');
             } else {
                 fetchDataFromCloud();
             }
         };
 
+        // 🔥 切換月份的核心邏輯
+        function initCalendar(yyyyMM) {
+            dates = [];
+            currentQueryMonth = yyyyMM;
+            const parts = yyyyMM.split('-');
+            const year = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10);
+            
+            currentYear = year - 1911; 
+            currentMonth = month;
+            daysInMonth = new Date(year, month, 0).getDate();
+            const weekdays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+            
+            // 產生該月份的所有天數
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dayStr = d < 10 ? `0${d}` : `${d}`;
+                const dateObj = new Date(year, month - 1, d);
+                const wday = weekdays[dateObj.getDay()];
+                const monthStr = month < 10 ? `0${month}` : `${month}`;
+                dates.push(`${monthStr}/${dayStr} (${wday})`);
+            }
+
+            // 強制補上「次月1號」給軟水跨月填報用
+            const nextMonthObj = new Date(year, month, 1);
+            const nmStr = (nextMonthObj.getMonth() + 1).toString().padStart(2, '0');
+            dates.push(`${nmStr}/01 (${weekdays[nextMonthObj.getDay()]}) [次月1號]`);
+            
+            titleText = `${currentYear}年${currentMonth}月份`;
+            document.title = `智慧收尾用量系統 - ${titleText}`;
+            document.getElementById('system-title-nav').innerHTML = `智慧收尾用量系統 <span class="text-sm font-normal text-gray-500 ml-2">(${titleText})</span>`;
+            document.getElementById('monthSelector').value = currentQueryMonth;
+            
+            buildTabsAndViews();
+        }
+
+        // 當用戶在導覽列切換月份時觸發
+        function loadTargetMonth(yyyyMM) {
+            if(!yyyyMM) return;
+            initCalendar(yyyyMM);
+            fetchDataFromCloud(); // 切換月份後，自動去雲端抓歷史資料
+        }
+
+        // 其餘工具函數不變
         function openQrModal() {
             const printArea = document.getElementById('qrPrintArea');
             printArea.innerHTML = '';
@@ -297,25 +226,15 @@
             items.forEach(item => {
                 const targetUrl = `${baseUrl}?qr=${item.id}`;
                 const qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(targetUrl)}`;
-                printArea.innerHTML += `
-                    <div class="flex flex-col items-center bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                        <h3 class="text-xl font-bold text-gray-800 mb-4">${item.label}</h3>
-                        <img src="${qrImgSrc}" alt="${item.label} QR Code" class="w-40 h-40 object-contain mb-3 border p-1">
-                        <p class="text-xs text-gray-400 break-all w-full text-center truncate">掃描即開啟填報畫面</p>
-                    </div>
-                `;
+                printArea.innerHTML += `<div class="flex flex-col items-center bg-white p-6 rounded-xl shadow-sm border border-gray-200"><h3 class="text-xl font-bold text-gray-800 mb-4">${item.label}</h3><img src="${qrImgSrc}" alt="${item.label} QR Code" class="w-40 h-40 object-contain mb-3 border p-1"><p class="text-xs text-gray-400 break-all w-full text-center truncate">掃描即開啟填報畫面</p></div>`;
             });
-            const modal = document.getElementById('qrModal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
+            document.getElementById('qrModal').classList.remove('hidden');
+            document.getElementById('qrModal').classList.add('flex');
         }
-
         function closeQrModal() {
-            const modal = document.getElementById('qrModal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
+            document.getElementById('qrModal').classList.add('hidden');
+            document.getElementById('qrModal').classList.remove('flex');
         }
-
         function autoFormatTime(str) {
             if (!str || str.toString().trim() === '') return str;
             let cleanStr = str.toString().trim();
@@ -331,20 +250,16 @@
             }
             return cleanStr;
         }
-
         function timeToMins(str) {
             if (!str || str.toString().trim() === '' || str.includes('跑位')) return null;
             let s = str.toString().trim();
             if (s.startsWith("'")) s = s.substring(1);
             s = autoFormatTime(s);
             let h = 0, m = 0;
-            if (s.includes(':')) {
-                let p = s.split(':');
-                h = parseInt(p[0], 10) || 0; m = parseInt(p[1], 10) || 0;
-            } else { h = parseInt(s, 10) || 0; }
+            if (s.includes(':')) { let p = s.split(':'); h = parseInt(p[0], 10) || 0; m = parseInt(p[1], 10) || 0; } 
+            else { h = parseInt(s, 10) || 0; }
             return h * 60 + m;
         }
-
         function minsToTime(mins) {
             if (mins === null || isNaN(mins)) return '-';
             let isNeg = mins < 0; mins = Math.abs(mins);
@@ -356,7 +271,11 @@
             if (SCRIPT_URL.includes('請將您部署後')) return;
             showLoading('從雲端載入資料中...');
             try {
-                const response = await fetch(SCRIPT_URL, { method: 'GET' });
+                // 🔥 將當前選擇的月份附在網址後面傳給 GAS
+                const joinChar = SCRIPT_URL.includes('?') ? '&' : '?';
+                const fetchUrl = SCRIPT_URL + joinChar + 'month=' + currentQueryMonth;
+                
+                const response = await fetch(fetchUrl, { method: 'GET' });
                 const data = await response.json();
                 originalCloudData = {}; 
                 for (const key in data) {
@@ -372,7 +291,7 @@
                     }
                 }
                 calcMasterTable();
-                showToast('✅ 雲端資料同步完成！', 'success');
+                showToast(`✅ ${titleText} 雲端資料同步完成！`, 'success');
             } catch (error) {
                 showToast('❌ 讀取雲端資料失敗，請確認網路設定。', 'error');
             } finally { hideLoading(); }
@@ -392,6 +311,10 @@
             if (Object.keys(data).length === 0) {
                 if (showToastMsg) showToast('👍 目前沒有新的修改需要儲存。', 'success'); return;
             }
+            
+            // 🔥 告訴後端這是哪個月份的資料，避免歷史資料蓋到現在
+            data['meta_month'] = currentQueryMonth; 
+            
             if (showToastMsg) showLoading('儲存變更至雲端中...');
             try {
                 const response = await fetch(SCRIPT_URL, {
@@ -414,23 +337,17 @@
             dates.forEach((dStr, idx) => { selectEl.innerHTML += `<option value="${idx}">${dStr}</option>`; });
             const td = new Date(); let todayIdx = td.getDate() - 1; 
             
-            // 軟水自動往後跳一格
-            if (item.type === 'dual') todayIdx += 1;
+            if (item.type === 'dual') todayIdx += 1; // 軟水自動推一天
             if (todayIdx >= dates.length) todayIdx = dates.length - 1;
             if (todayIdx < 0) todayIdx = 0;
             
             selectEl.value = todayIdx;
             const container = document.getElementById('field-inputs-container');
             
-            if (item.type === 'time_oc') {
-                container.innerHTML = `<label class="block text-sm font-bold text-gray-700 mb-1">📝 輸入收 (時間讀數) [自動連動隔天開]:</label><input type="text" id="fieldVal_e" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30">`;
-            } else if (item.type === 'time_3') {
-                container.innerHTML = `<div class="space-y-4"><div><label class="block text-sm font-bold text-gray-700 mb-1">🔥 低燃燒 (時間讀數):</label><input type="text" id="fieldVal_low" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div><div><label class="block text-sm font-bold text-gray-700 mb-1">🔥🔥 中燃燒 (時間讀數):</label><input type="text" id="fieldVal_mid" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div><div><label class="block text-sm font-bold text-gray-700 mb-1">🔥🔥🔥 高燃燒 (時間讀數):</label><input type="text" id="fieldVal_high" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div></div>`;
-            } else if (item.type === 'dual') {
-                container.innerHTML = `<div class="space-y-4"><div><label class="block text-sm font-bold text-gray-700 mb-1">💧 A水塔 (剩餘刻度):</label><input type="number" step="0.01" id="fieldVal_a" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div><div><label class="block text-sm font-bold text-gray-700 mb-1">💧 B水塔 (剩餘刻度):</label><input type="number" step="0.01" id="fieldVal_b" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div></div>`;
-            } else {
-                container.innerHTML = `<label class="block text-sm font-bold text-gray-700 mb-1">📝 輸入當日讀數:</label><input type="number" step="0.01" id="fieldVal" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30">`;
-            }
+            if (item.type === 'time_oc') { container.innerHTML = `<label class="block text-sm font-bold text-gray-700 mb-1">📝 輸入收 (時間讀數) [自動連動隔天開]:</label><input type="text" id="fieldVal_e" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30">`; } 
+            else if (item.type === 'time_3') { container.innerHTML = `<div class="space-y-4"><div><label class="block text-sm font-bold text-gray-700 mb-1">🔥 低燃燒 (時間讀數):</label><input type="text" id="fieldVal_low" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div><div><label class="block text-sm font-bold text-gray-700 mb-1">🔥🔥 中燃燒 (時間讀數):</label><input type="text" id="fieldVal_mid" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div><div><label class="block text-sm font-bold text-gray-700 mb-1">🔥🔥🔥 高燃燒 (時間讀數):</label><input type="text" id="fieldVal_high" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div></div>`; } 
+            else if (item.type === 'dual') { container.innerHTML = `<div class="space-y-4"><div><label class="block text-sm font-bold text-gray-700 mb-1">💧 A水塔 (剩餘刻度):</label><input type="number" step="0.01" id="fieldVal_a" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div><div><label class="block text-sm font-bold text-gray-700 mb-1">💧 B水塔 (剩餘刻度):</label><input type="number" step="0.01" id="fieldVal_b" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div></div>`; } 
+            else { container.innerHTML = `<label class="block text-sm font-bold text-gray-700 mb-1">📝 輸入當日讀數:</label><input type="number" step="0.01" id="fieldVal" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30">`; }
             document.getElementById('fieldWorkerView').style.display = 'flex';
         }
 
@@ -461,6 +378,9 @@
                 if (!val) { showToast('請輸入數值', 'error'); return; }
                 dataToSubmit[`${item.id}_${dateIdx}`] = val;
             }
+
+            // 🔥 手機端送出時也夾帶當前月份，確保存對地方
+            dataToSubmit['meta_month'] = currentQueryMonth;
 
             const btn = document.getElementById('fieldSubmitBtn');
             btn.disabled = true; btn.innerText = '⏳ 雲端傳輸中...'; btn.classList.replace('bg-blue-600', 'bg-gray-500');
@@ -495,16 +415,12 @@
                         <h2 class="text-xl font-bold text-gray-700">📅 ${titleText}設備用量總結算表</h2>
                         <div class="flex flex-wrap gap-2 print-hide">
                             <button onclick="syncDataToCloud()" id="saveBtn" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">☁️ 儲存至試算表</button>
-                            <button onclick="openQrModal()" class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">🖨️ 列印 QR Code</button>
+                            <button onclick="openQrModal()" class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">🖨️️ 列印 QR Code</button>
                             <button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">📸 截圖分享 (10天)</button>
                         </div>
                     </div>
-                    
                     <div class="table-container mb-6" id="masterTableContainer">
-                        <table class="master-table" id="masterTable">
-                            <thead><tr>${thHtml}</tr></thead>
-                            <tbody id="masterTableBody"></tbody>
-                        </table>
+                        <table class="master-table" id="masterTable"><thead><tr>${thHtml}</tr></thead><tbody id="masterTableBody"></tbody></table>
                     </div>
                 </div>
             `;
@@ -573,7 +489,6 @@
             if (!isNaN(currNum) && !isNaN(prevNum)) return currNum - prevNum;
             return null;
         }
-        
         function getTankUsage(currStr, nextStr) {
             if (!currStr || currStr.trim() === '' || !nextStr || nextStr.trim() === '') return null;
             let c = parseFloat(currStr); let n = parseFloat(nextStr);
@@ -586,10 +501,8 @@
             const tbody = document.getElementById('masterTableBody');
             if (!tbody) return;
             tbody.innerHTML = '';
-
             dates.forEach((dateStr, dIdx) => {
                 let rowHtml = `<tr data-date-idx="${dIdx}"><td class="col-date">${dateStr}</td>`;
-                
                 items.forEach(item => {
                     if (item.type === 'time_oc') {
                         const openVal = timeToMins(document.getElementById(`${item.id}_s_${dIdx}`)?.value);
@@ -630,7 +543,6 @@
                     if (bVal === undefined || bVal === '') bVal = '-';
                     rowHtml += `<td class="col-std font-bold text-gray-700 bg-gray-50/40">${bVal}</td>`;
                 });
-
                 rowHtml += `</tr>`;
                 tbody.innerHTML += rowHtml;
             });
@@ -644,7 +556,6 @@
             requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('show')));
             setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, type === 'error' ? 5000 : 3000);
         }
-
         function showLoading(text) { document.getElementById('loading-text').innerText = text; document.getElementById('loading-overlay').style.display = 'flex'; }
         function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
 
@@ -652,7 +563,6 @@
             const activeTab = document.querySelector('.tab-content.active');
             if (!activeTab) return;
             showToast('正在產生 10 天份報表圖片...', 'loading');
-
             try {
                 const todayIdx = new Date().getDate() - 1;
                 const startIdx = Math.max(0, todayIdx - 9);
@@ -660,25 +570,17 @@
                 if (!sourceTable) throw new Error('找不到表格');
 
                 const report = document.createElement('div');
-                report.style.cssText = `
-                    position: fixed; left: -100000px; top: 0;
-                    background: #fff; padding: 28px 30px 32px;
-                    box-sizing: border-box; font-family: 'Microsoft JhengHei','Segoe UI',sans-serif;
-                `;
-
+                report.style.cssText = `position: fixed; left: -100000px; top: 0; background: #fff; padding: 28px 30px 32px; box-sizing: border-box; font-family: 'Microsoft JhengHei','Segoe UI',sans-serif;`;
                 const title = document.createElement('div');
                 const sourceTitle = activeTab.querySelector('h2');
                 title.textContent = sourceTitle ? sourceTitle.innerText : '每日用量紀錄';
                 title.style.cssText = `font-size: 30px; line-height: 1.25; font-weight: 800; color: #1e3a8a; margin: 0 0 20px 4px; white-space: nowrap;`;
                 report.appendChild(title);
-
                 const table = sourceTable.cloneNode(true);
-
                 table.querySelectorAll('tbody tr').forEach(row => {
                     const idx = parseInt(row.getAttribute('data-date-idx'), 10);
                     if (!Number.isNaN(idx) && (idx < startIdx || idx > todayIdx)) row.remove();
                 });
-
                 table.querySelectorAll('input').forEach(cloneInput => {
                     const dataId = cloneInput.getAttribute('data-id');
                     const originalInput = dataId ? document.querySelector(`[data-id="${dataId}"]`) : null;
@@ -688,46 +590,28 @@
                     text.style.cssText = `display:flex; align-items:center; justify-content:center; width:100%; min-height:38px; box-sizing:border-box; font-size:18px; color:#111827; white-space:nowrap;`;
                     cloneInput.replaceWith(text);
                 });
-
                 const colCount = table.querySelectorAll('thead th').length || 1;
-                const dateWidth = 190;
-                const otherWidth = 140; 
+                const dateWidth = 190; const otherWidth = 140; 
                 const tableWidth = dateWidth + Math.max(0, colCount - 1) * otherWidth;
-                
                 report.style.width = `${tableWidth + 60}px`;
                 table.style.cssText = `width:${tableWidth}px; min-width:${tableWidth}px; max-width:none; table-layout:fixed; border-collapse:collapse; border-spacing:0; background:#fff; margin:0; box-shadow:none; border-radius:0;`;
-
                 table.querySelectorAll('th, td').forEach((cell, index) => {
                     cell.style.position = 'static'; cell.style.left = 'auto'; cell.style.top = 'auto';
                     cell.style.height = '58px'; cell.style.padding = '8px 10px'; cell.style.boxSizing = 'border-box';
                     cell.style.border = '1px solid #cbd5e1'; cell.style.textAlign = 'center'; cell.style.verticalAlign = 'middle';
                     cell.style.overflow = 'visible'; cell.style.textOverflow = 'clip'; cell.style.whiteSpace = 'nowrap'; cell.style.fontSize = '18px';
                 });
-
-                table.querySelectorAll('thead th').forEach(th => {
-                    th.style.background = '#bfdbfe'; th.style.color = '#1e3a8a';
-                    th.style.fontWeight = '800'; th.style.fontSize = '19px';
-                });
-
+                table.querySelectorAll('thead th').forEach(th => { th.style.background = '#bfdbfe'; th.style.color = '#1e3a8a'; th.style.fontWeight = '800'; th.style.fontSize = '19px'; });
                 table.querySelectorAll('tr').forEach(row => {
                     const first = row.children[0];
-                    if (first) {
-                        first.style.width = `${dateWidth}px`; first.style.minWidth = `${dateWidth}px`;
-                        first.style.maxWidth = `${dateWidth}px`; first.style.fontWeight = '700';
-                        first.style.whiteSpace = 'nowrap'; first.style.overflow = 'visible'; first.style.textOverflow = 'clip';
-                    }
-                    for (let i = 1; i < row.children.length; i++) {
-                        row.children[i].style.width = `${otherWidth}px`; row.children[i].style.minWidth = `${otherWidth}px`; row.children[i].style.maxWidth = `${otherWidth}px`;
-                    }
+                    if (first) { first.style.width = `${dateWidth}px`; first.style.minWidth = `${dateWidth}px`; first.style.maxWidth = `${dateWidth}px`; first.style.fontWeight = '700'; first.style.whiteSpace = 'nowrap'; first.style.overflow = 'visible'; first.style.textOverflow = 'clip'; }
+                    for (let i = 1; i < row.children.length; i++) { row.children[i].style.width = `${otherWidth}px`; row.children[i].style.minWidth = `${otherWidth}px`; row.children[i].style.maxWidth = `${otherWidth}px`; }
                 });
-
                 report.appendChild(table);
                 document.body.appendChild(report);
                 await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-
                 const canvas = await html2canvas(report, { scale: 2, backgroundColor: '#ffffff', width: report.scrollWidth, height: report.scrollHeight });
                 report.remove();
-
                 canvas.toBlob(async (blob) => {
                     const startDateStr = dates[startIdx].split(' ')[0];
                     const endDateStr = dates[todayIdx].split(' ')[0];
@@ -739,13 +623,8 @@
                         catch (error) { if (error.name !== 'AbortError') downloadFallback(blob, fileName); }
                     } else { downloadFallback(blob, fileName); showToast('📥 報表圖片已產生！', 'success'); }
                 }, 'image/jpeg', 0.95);
-
-            } catch (error) {
-                document.querySelectorAll('body > div').forEach(el => { if (el.style && el.style.left === '-100000px') el.remove(); });
-                showToast('❌ 截圖發生錯誤', 'error');
-            }
+            } catch (error) { document.querySelectorAll('body > div').forEach(el => { if (el.style && el.style.left === '-100000px') el.remove(); }); showToast('❌ 截圖發生錯誤', 'error'); }
         }
-
         function downloadFallback(blob, fileName) {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a'); link.download = fileName; link.href = url;
