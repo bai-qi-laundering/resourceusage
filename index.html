@@ -444,7 +444,7 @@
                     tableHead = `<tr><th style="width: 120px;">日期</th><th>當日讀數</th><th>今日用量</th></tr>`;
                     tableBody = dates.map((dateStr, dIdx) => `<tr data-date-idx="${dIdx}"><td class="font-semibold bg-gray-50">${dateStr}</td><td><input type="number" step="0.01" class="cell-input" id="${item.id}_${dIdx}" data-id="${item.id}_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_${item.id}_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td></tr>`).join('');
                 }
-                contentContainer.innerHTML += `<div id="${tabId}" class="tab-content bg-white p-4 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0"><div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4"><h2 class="text-xl font-bold text-blue-800">📌 ${item.id === 'gas1' ? '瓦斯1 / 瓦斯2' : item.id === 'water_l' ? '大支自來水 / 小支自來水' : item.id === 'soft_a' ? '大支軟水 / 錳砂' : item.label} - 每日度數紀錄</h2><div class="flex flex-wrap gap-2 print-hide"><button onclick="syncDataToCloud()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">☁️ 儲存至雲端</button><button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">📸 截圖分享 (10天)</button></div></div><div class="table-container"><table class="fixed-table"><thead>${tableHead}</thead><tbody>${tableBody}</tbody></table></div></div>`;
+                contentContainer.innerHTML += `<div id="${tabId}" class="tab-content bg-white p-4 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0"><div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4"><h2 class="text-xl font-bold text-blue-800">📌 ${item.id === 'gas1' ? '瓦斯1 / 瓦斯2' : item.id === 'water_l' ? '大支自來水 / 小支自來水' : item.id === 'soft_a' ? '大支軟水 / 錳砂' : item.label} - 每日度數紀錄</h2><div class="flex flex-wrap gap-2 print-hide"><button onclick="syncDataToCloud()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">☁ 儲存至雲端</button><button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">📸 截圖分享 (10天)</button></div></div><div class="table-container"><table class="fixed-table"><thead>${tableHead}</thead><tbody>${tableBody}</tbody></table></div></div>`;
             });
             calcMasterTable();
         }
@@ -478,26 +478,25 @@
             return null;
         }
 
-        // 🔥🔥🔥 全新指定的霸王級神公式！
+        // 🔥 回歸最初、最完美的看剩餘刻度自動換算公式！
         function getTankUsage(currStr, nextStr) {
             if (!currStr || currStr.trim() === '' || !nextStr || nextStr.trim() === '') return null;
             let c = parseFloat(currStr); 
             let n = parseFloat(nextStr);
             if (isNaN(c) || isNaN(n)) return null;
 
-            // 防呆：連兩天 0，代表沒動靜，直接算 0
-            if (c === 0 && n === 0) return 0;
-
-            // 0 就是 12！(把今天的 0 視為滿水位 12)
-            if (c === 0) {
-                c = 12;
+            let usage = 0;
+            if (c >= n) {
+                // 正常消耗 (今天刻度 >= 明天刻度)
+                usage = c - n;
+            } else {
+                // 換新桶 / 重新加滿 (今天刻度 < 明天刻度)
+                // 舊桶用掉的 (c) + 新桶用掉的 (12 - n)
+                usage = c + (12 - n);
             }
-
-            // 今天 - 明天的數值
-            let usage = c - n;
-
-            // 避免出現負數，最少回傳 0
-            return Math.max(0, usage);
+            
+            // 避免 JavaScript 小數點計算產生一堆 9999，四捨五入到小數點第二位，並避免出現負數
+            return Math.max(0, Math.round(usage * 100) / 100);
         }
 
         function calcMasterTable() {
