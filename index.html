@@ -478,13 +478,12 @@
             return null;
         }
 
-        // 🔥 這裡已經修正為純粹的「明天讀數(n) - 今天讀數(c)」
+        // 🔥 這裡已經加上「絕對值 (Math.abs)」修正！
         function getTankUsage(currStr, nextStr) {
             if (!currStr || currStr.trim() === '' || !nextStr || nextStr.trim() === '') return null;
             let c = parseFloat(currStr); let n = parseFloat(nextStr);
             if (isNaN(c) || isNaN(n)) return null;
-            let usage = n - c;
-            return Math.max(0, usage);
+            return Math.abs(n - c);
         }
 
         function calcMasterTable() {
