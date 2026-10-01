@@ -478,12 +478,27 @@
             return null;
         }
 
-        // 🔥 這裡已經加上「絕對值 (Math.abs)」修正！
+        // 🔥 已經完全依照妳指定的 A/B 水塔特殊公式修改
         function getTankUsage(currStr, nextStr) {
             if (!currStr || currStr.trim() === '' || !nextStr || nextStr.trim() === '') return null;
             let c = parseFloat(currStr); let n = parseFloat(nextStr);
             if (isNaN(c) || isNaN(n)) return null;
-            return Math.abs(n - c);
+
+            // 防呆機制：連兩天為 0，表示沒有用水
+            if (c === 0 && n === 0) {
+                return 0;
+            }
+
+            if (n > c) {
+                // 明天讀數 > 今天讀數：用量 = 明天 - 今天
+                return n - c;
+            } else if (n === 0) {
+                // 明天讀數為 0：用量 = 12 - 今天
+                return 12 - c;
+            } else {
+                // 正常消耗情況 (今天大於明天，且明天不為0)
+                return c - n;
+            }
         }
 
         function calcMasterTable() {
