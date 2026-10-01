@@ -386,6 +386,7 @@
             finally { btn.disabled = false; btn.innerText = '✅ 確認送出寫入'; btn.classList.replace('bg-gray-500', 'bg-blue-600'); }
         }
 
+        // 🔥🔥🔥 核心修改區：在每個「一般累積型」報表最上方加上【上月底讀數】的黃色格子
         function buildTabsAndViews() {
             const tabsContainer = document.getElementById('navTabsContainer');
             const contentContainer = document.getElementById('tabsContentContainer');
@@ -433,16 +434,20 @@
                     tableBody = dates.map((dateStr, dIdx) => `<tr data-date-idx="${dIdx}"><td class="font-semibold bg-gray-50 text-sm">${dateStr}</td><td><input type="number" step="0.01" class="cell-input" id="${item.id}_a_${dIdx}" data-id="${item.id}_a_${dIdx}" oninput="calcMasterTable()"></td><td><input type="number" step="0.01" class="cell-input" id="${item.id}_b_${dIdx}" data-id="${item.id}_b_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_${item.id}_a_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td><td id="usage_${item.id}_b_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td><td id="usage_${item.id}_total_${dIdx}" class="font-black text-emerald-700 bg-emerald-50">-</td></tr>`).join('');
                 } else if (item.id === 'gas1') {
                     tableHead = `<tr><th style="width: 140px;">日期</th><th>瓦斯1讀數</th><th>瓦斯1用量</th><th>瓦斯2讀數</th><th>瓦斯2用量</th><th>總用量</th></tr>`;
-                    tableBody = dates.map((dateStr, dIdx) => `<tr data-date-idx="${dIdx}"><td class="font-semibold bg-gray-50">${dateStr}</td><td><input type="number" step="0.01" class="cell-input" id="gas1_${dIdx}" data-id="gas1_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_gas1_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td><td><input type="number" step="0.01" class="cell-input" id="gas2_${dIdx}" data-id="gas2_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_gas2_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td><td id="usage_gas_total_${dIdx}" class="font-black text-emerald-700 bg-emerald-50">-</td></tr>`).join('');
+                    let topRow = `<tr class="bg-amber-50"><td class="font-bold text-amber-800 text-sm border-r border-amber-200">🔄 上月底讀數</td><td><input type="number" step="0.01" class="cell-input border-amber-400 bg-white" id="gas1_prev" data-id="gas1_prev" oninput="calcMasterTable()"></td><td class="text-gray-400">-</td><td><input type="number" step="0.01" class="cell-input border-amber-400 bg-white" id="gas2_prev" data-id="gas2_prev" oninput="calcMasterTable()"></td><td class="text-gray-400">-</td><td class="text-gray-400">-</td></tr>`;
+                    tableBody = topRow + dates.map((dateStr, dIdx) => `<tr data-date-idx="${dIdx}"><td class="font-semibold bg-gray-50">${dateStr}</td><td><input type="number" step="0.01" class="cell-input" id="gas1_${dIdx}" data-id="gas1_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_gas1_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td><td><input type="number" step="0.01" class="cell-input" id="gas2_${dIdx}" data-id="gas2_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_gas2_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td><td id="usage_gas_total_${dIdx}" class="font-black text-emerald-700 bg-emerald-50">-</td></tr>`).join('');
                 } else if (item.id === 'water_l') {
                     tableHead = `<tr><th style="width:140px;">日期</th><th>大自來水讀數</th><th>大自來水用量</th><th>小自來水讀數</th><th>小自來水用量</th></tr>`;
-                    tableBody = dates.map((dateStr, dIdx) => `<tr data-date-idx="${dIdx}"><td class="font-semibold bg-gray-50">${dateStr}</td><td><input type="number" step="0.01" class="cell-input" id="water_l_${dIdx}" data-id="water_l_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_water_l_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td><td><input type="number" step="0.01" class="cell-input" id="water_s_${dIdx}" data-id="water_s_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_water_s_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td></tr>`).join('');
+                    let topRow = `<tr class="bg-amber-50"><td class="font-bold text-amber-800 text-sm border-r border-amber-200">🔄 上月底讀數</td><td><input type="number" step="0.01" class="cell-input border-amber-400 bg-white" id="water_l_prev" data-id="water_l_prev" oninput="calcMasterTable()"></td><td class="text-gray-400">-</td><td><input type="number" step="0.01" class="cell-input border-amber-400 bg-white" id="water_s_prev" data-id="water_s_prev" oninput="calcMasterTable()"></td><td class="text-gray-400">-</td></tr>`;
+                    tableBody = topRow + dates.map((dateStr, dIdx) => `<tr data-date-idx="${dIdx}"><td class="font-semibold bg-gray-50">${dateStr}</td><td><input type="number" step="0.01" class="cell-input" id="water_l_${dIdx}" data-id="water_l_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_water_l_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td><td><input type="number" step="0.01" class="cell-input" id="water_s_${dIdx}" data-id="water_s_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_water_s_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td></tr>`).join('');
                 } else if (item.id === 'soft_a') {
                     tableHead = `<tr><th style="width:140px;">日期</th><th>大軟水讀數</th><th>大軟水用量</th><th>錳砂讀數</th><th>錳砂用量</th></tr>`;
-                    tableBody = dates.map((dateStr, dIdx) => `<tr data-date-idx="${dIdx}"><td class="font-semibold bg-gray-50">${dateStr}</td><td><input type="number" step="0.01" class="cell-input" id="soft_a_${dIdx}" data-id="soft_a_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_soft_a_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td><td><input type="number" step="0.01" class="cell-input" id="meng_${dIdx}" data-id="meng_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_meng_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td></tr>`).join('');
+                    let topRow = `<tr class="bg-amber-50"><td class="font-bold text-amber-800 text-sm border-r border-amber-200">🔄 上月底讀數</td><td><input type="number" step="0.01" class="cell-input border-amber-400 bg-white" id="soft_a_prev" data-id="soft_a_prev" oninput="calcMasterTable()"></td><td class="text-gray-400">-</td><td><input type="number" step="0.01" class="cell-input border-amber-400 bg-white" id="meng_prev" data-id="meng_prev" oninput="calcMasterTable()"></td><td class="text-gray-400">-</td></tr>`;
+                    tableBody = topRow + dates.map((dateStr, dIdx) => `<tr data-date-idx="${dIdx}"><td class="font-semibold bg-gray-50">${dateStr}</td><td><input type="number" step="0.01" class="cell-input" id="soft_a_${dIdx}" data-id="soft_a_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_soft_a_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td><td><input type="number" step="0.01" class="cell-input" id="meng_${dIdx}" data-id="meng_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_meng_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td></tr>`).join('');
                 } else {
                     tableHead = `<tr><th style="width: 120px;">日期</th><th>當日讀數</th><th>今日用量</th></tr>`;
-                    tableBody = dates.map((dateStr, dIdx) => `<tr data-date-idx="${dIdx}"><td class="font-semibold bg-gray-50">${dateStr}</td><td><input type="number" step="0.01" class="cell-input" id="${item.id}_${dIdx}" data-id="${item.id}_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_${item.id}_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td></tr>`).join('');
+                    let topRow = `<tr class="bg-amber-50"><td class="font-bold text-amber-800 text-sm border-r border-amber-200">🔄 上月底讀數</td><td><input type="number" step="0.01" class="cell-input border-amber-400 bg-white" id="${item.id}_prev" data-id="${item.id}_prev" oninput="calcMasterTable()"></td><td class="text-gray-400">-</td></tr>`;
+                    tableBody = topRow + dates.map((dateStr, dIdx) => `<tr data-date-idx="${dIdx}"><td class="font-semibold bg-gray-50">${dateStr}</td><td><input type="number" step="0.01" class="cell-input" id="${item.id}_${dIdx}" data-id="${item.id}_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_${item.id}_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td></tr>`).join('');
                 }
                 contentContainer.innerHTML += `<div id="${tabId}" class="tab-content bg-white p-4 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0"><div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4"><h2 class="text-xl font-bold text-blue-800">📌 ${item.id === 'gas1' ? '瓦斯1 / 瓦斯2' : item.id === 'water_l' ? '大支自來水 / 小支自來水' : item.id === 'soft_a' ? '大支軟水 / 錳砂' : item.label} - 每日度數紀錄</h2><div class="flex flex-wrap gap-2 print-hide"><button onclick="syncDataToCloud()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">☁ 儲存至雲端</button><button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">📸 截圖分享 (10天)</button></div></div><div class="table-container"><table class="fixed-table"><thead>${tableHead}</thead><tbody>${tableBody}</tbody></table></div></div>`;
             });
@@ -466,19 +471,29 @@
             calcMasterTable();
         }
 
+        // 🔥🔥🔥 核心修改區：當計算 1 號 (dIdx === 0) 的用量時，去抓「_prev」格子的數字來相減
         function getRawUsage(baseId, dIdx, isTime) {
             let currStr = document.getElementById(`${baseId}_${dIdx}`)?.value;
             if (!currStr || currStr.includes('跑位')) return null;
             if (isTime) return timeToMins(currStr);
-            if (dIdx === 0) return null;
-            let prevStr = document.getElementById(`${baseId}_${dIdx - 1}`)?.value;
-            if (!prevStr || prevStr.includes('跑位')) return null;
-            let currNum = parseFloat(currStr); let prevNum = parseFloat(prevStr);
+            
+            let prevStr;
+            if (dIdx === 0) {
+                // 如果是這個月第一天，去找最上面的黃色格子
+                prevStr = document.getElementById(`${baseId}_prev`)?.value;
+            } else {
+                // 如果是第二天以後，找昨天的格子
+                prevStr = document.getElementById(`${baseId}_${dIdx - 1}`)?.value;
+            }
+            
+            if (!prevStr || prevStr.includes('跑位') || prevStr.trim() === '') return null;
+            
+            let currNum = parseFloat(currStr); 
+            let prevNum = parseFloat(prevStr);
             if (!isNaN(currNum) && !isNaN(prevNum)) return currNum - prevNum;
             return null;
         }
 
-        // 🔥 回歸最初、最完美的看剩餘刻度自動換算公式！
         function getTankUsage(currStr, nextStr) {
             if (!currStr || currStr.trim() === '' || !nextStr || nextStr.trim() === '') return null;
             let c = parseFloat(currStr); 
@@ -491,11 +506,8 @@
                 usage = c - n;
             } else {
                 // 換新桶 / 重新加滿 (今天刻度 < 明天刻度)
-                // 舊桶用掉的 (c) + 新桶用掉的 (12 - n)
                 usage = c + (12 - n);
             }
-            
-            // 避免 JavaScript 小數點計算產生一堆 9999，四捨五入到小數點第二位，並避免出現負數
             return Math.max(0, Math.round(usage * 100) / 100);
         }
 
@@ -605,6 +617,7 @@
                 });
                 table.querySelectorAll('thead th').forEach(th => { th.style.background = '#bfdbfe'; th.style.color = '#1e3a8a'; th.style.fontWeight = '800'; th.style.fontSize = '19px'; });
                 table.querySelectorAll('tr').forEach(row => {
+                    if (row.classList.contains('bg-amber-50')) { row.remove(); return; } // 截圖時隱藏黃色的上月讀數
                     const first = row.children[0];
                     if (first) { first.style.width = `${dateWidth}px`; first.style.minWidth = `${dateWidth}px`; first.style.maxWidth = `${dateWidth}px`; first.style.fontWeight = '700'; first.style.whiteSpace = 'nowrap'; first.style.overflow = 'visible'; first.style.textOverflow = 'clip'; }
                     for (let i = 1; i < row.children.length; i++) { row.children[i].style.width = `${otherWidth}px`; row.children[i].style.minWidth = `${otherWidth}px`; row.children[i].style.maxWidth = `${otherWidth}px`; }
