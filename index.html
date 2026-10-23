@@ -289,6 +289,17 @@
 
         async function syncDataToCloud(showToastMsg = true) {
             if (SCRIPT_URL.includes('請將您部署後')) return;
+            const tankInputs = [...document.querySelectorAll('input.cell-input[id^="soft_ab_"]')];
+            for (const input of tankInputs) {
+                if (input.value.trim() === '') continue;
+                const n = Number(input.value);
+                const valid = input.id.includes('_swap_') ? Number.isInteger(n) && n >= 0 : validTankReading(input.value);
+                if (!valid) { showToast('AB剩餘量須為0～12升，換桶數須為非負整數', 'error'); input.focus(); return; }
+                if (input.id.includes('_swap_')) {
+                    const reading = document.getElementById(input.id.replace('_swap_', '_'));
+                    if (!reading || !validTankReading(reading.value)) { showToast('填寫換桶數時，也請填寫該桶剩餘量', 'error'); return; }
+                }
+            }
             const data = {};
             document.querySelectorAll('input.cell-input').forEach(input => {
                 if (input.value.trim() !== '' && !input.value.includes('跑位')) {
@@ -319,6 +330,20 @@
             finally { if (showToastMsg) hideLoading(); }
         }
 
+
+        // 換桶次數記在本次讀數列，計入「前次讀數至本次讀數」的用量。
+        function tankControls(id, cell = false) {
+            return `<div class="flex items-center justify-center gap-1"><button type="button" class="print-hide border rounded px-2" onclick="adjustTankCount('${id}',-1)">−</button><input type="number" min="0" step="1" placeholder="自動" class="${cell ? 'cell-input' : 'border rounded p-2 w-20 text-center'}" id="${id}" data-id="${id}" oninput="calcMasterTable()"><button type="button" class="print-hide border rounded px-2 text-blue-700" onclick="adjustTankCount('${id}',1)">＋換桶</button></div>`;
+        }
+        function adjustTankCount(id, delta) {
+            const input = document.getElementById(id);
+            input.value = Math.max(0, (Number(input.value) || 0) + delta);
+            calcMasterTable();
+        }
+        function validTankReading(value) {
+            return value !== '' && Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 12;
+        }
+
         function initFieldWorkerView(item) {
             activeFieldItem = item;
             document.getElementById('field-device-title').innerText = item.label;
@@ -335,7 +360,10 @@
             
             if (item.type === 'time_oc') { container.innerHTML = `<label class="block text-sm font-bold text-gray-700 mb-1">📝 輸入收 (時間讀數) [自動連動隔天開]:</label><input type="text" id="fieldVal_e" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30">`; } 
             else if (item.type === 'time_3') { container.innerHTML = `<div class="space-y-4"><div><label class="block text-sm font-bold text-gray-700 mb-1">🔥 低燃燒 (時間讀數):</label><input type="text" id="fieldVal_low" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div><div><label class="block text-sm font-bold text-gray-700 mb-1">🔥🔥 中燃燒 (時間讀數):</label><input type="text" id="fieldVal_mid" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div><div><label class="block text-sm font-bold text-gray-700 mb-1">🔥🔥🔥 高燃燒 (時間讀數):</label><input type="text" id="fieldVal_high" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div></div>`; } 
-            else if (item.type === 'dual') { container.innerHTML = `<div class="space-y-4"><div><label class="block text-sm font-bold text-gray-700 mb-1">💧 A水塔讀數:</label><input type="number" step="0.01" id="fieldVal_a" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div><div><label class="block text-sm font-bold text-gray-700 mb-1">💧 B水塔讀數:</label><input type="number" step="0.01" id="fieldVal_b" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30"></div></div>`; } 
+            else if (item.type === 'dual') {
+                container.innerHTML = '<p class="text-sm text-gray-600 mb-3">每桶 12 升。填目前剩餘量；換桶次數是前次讀數到本次讀數之間換了幾桶。空白沿用舊版自動判斷，0 表示沒換桶。用量依原規則列在前一列日期。</p>' +
+                ['a', 'b'].map(side => `<div class="mb-3"><label class="font-bold">${side.toUpperCase()} 桶目前剩餘（升）</label><input type="number" min="0" max="12" step="0.01" id="fieldVal_${side}" class="w-full p-2 text-center text-xl border rounded"><label class="text-sm">本次換桶數</label>${tankControls('fieldSwap_' + side)}</div>`).join('');
+            }
             else { container.innerHTML = `<label class="block text-sm font-bold text-gray-700 mb-1">📝 輸入當日讀數:</label><input type="number" step="0.01" id="fieldVal" class="w-full p-3.5 text-center text-2xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30">`; }
             document.getElementById('fieldWorkerView').style.display = 'flex';
         }
@@ -361,7 +389,13 @@
             } else if (item.type === 'dual') {
                 const a = document.getElementById('fieldVal_a').value.trim(); const b = document.getElementById('fieldVal_b').value.trim();
                 if (!a && !b) { showToast('請至少填寫一個', 'error'); return; }
-                if (a) dataToSubmit[`${item.id}_a_${dateIdx}`] = a; if (b) dataToSubmit[`${item.id}_b_${dateIdx}`] = b;
+                for (const [side, value] of [['a', a], ['b', b]]) {
+                    const count = document.getElementById('fieldSwap_' + side).value.trim();
+                    if (value && !validTankReading(value)) { showToast('剩餘量請填 0～12 升', 'error'); return; }
+                    if (count !== '' && (!Number.isInteger(Number(count)) || Number(count) < 0 || !value)) { showToast('換桶數請填非負整數，並填寫該桶剩餘量', 'error'); return; }
+                    if (value) dataToSubmit[`${item.id}_${side}_${dateIdx}`] = value;
+                    if (count !== '') dataToSubmit[`${item.id}_swap_${side}_${dateIdx}`] = count;
+                }
             } else {
                 const val = document.getElementById('fieldVal').value.trim();
                 if (!val) { showToast('請輸入數值', 'error'); return; }
@@ -379,7 +413,7 @@
                     showToast(`✅ 數據已成功寫入！`, 'success');
                     if (item.type === 'time_oc') document.getElementById('fieldVal_e').value = '';
                     else if (item.type === 'time_3') { document.getElementById('fieldVal_low').value = ''; document.getElementById('fieldVal_mid').value = ''; document.getElementById('fieldVal_high').value = ''; }
-                    else if (item.type === 'dual') { document.getElementById('fieldVal_a').value = ''; document.getElementById('fieldVal_b').value = ''; }
+                    else if (item.type === 'dual') { document.getElementById('fieldVal_a').value = ''; document.getElementById('fieldVal_b').value = ''; document.getElementById('fieldSwap_a').value = ''; document.getElementById('fieldSwap_b').value = ''; }
                     else document.getElementById('fieldVal').value = '';
                 }
             } catch (error) { showToast('❌ 傳輸失敗。', 'error'); } 
@@ -430,8 +464,9 @@
                     tableHead = `<tr><th style="width: 120px;">日期</th><th>低燃燒</th><th>中燃燒</th><th>高燃燒</th><th>今日用量</th></tr>`;
                     tableBody = dates.map((dateStr, dIdx) => `<tr data-date-idx="${dIdx}"><td class="font-semibold bg-gray-50">${dateStr}</td><td><input type="text" class="cell-input" id="${item.id}_low_${dIdx}" data-id="${item.id}_low_${dIdx}" oninput="calcMasterTable()" onblur="this.value=autoFormatTime(this.value); calcMasterTable()"></td><td><input type="text" class="cell-input" id="${item.id}_mid_${dIdx}" data-id="${item.id}_mid_${dIdx}" oninput="calcMasterTable()" onblur="this.value=autoFormatTime(this.value); calcMasterTable()"></td><td><input type="text" class="cell-input" id="${item.id}_high_${dIdx}" data-id="${item.id}_high_${dIdx}" oninput="calcMasterTable()" onblur="this.value=autoFormatTime(this.value); calcMasterTable()"></td><td id="usage_${item.id}_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td></tr>`).join('');
                 } else if (item.type === 'dual') {
-                    tableHead = `<tr><th style="width: 90px;">日期</th><th>A表讀數</th><th>B表讀數</th><th>A表用量</th><th>B表用量</th><th>每日總用量</th></tr>`;
-                    tableBody = dates.map((dateStr, dIdx) => `<tr data-date-idx="${dIdx}"><td class="font-semibold bg-gray-50 text-sm">${dateStr}</td><td><input type="number" step="0.01" class="cell-input" id="${item.id}_a_${dIdx}" data-id="${item.id}_a_${dIdx}" oninput="calcMasterTable()"></td><td><input type="number" step="0.01" class="cell-input" id="${item.id}_b_${dIdx}" data-id="${item.id}_b_${dIdx}" oninput="calcMasterTable()"></td><td id="usage_${item.id}_a_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td><td id="usage_${item.id}_b_${dIdx}" class="font-bold text-blue-600 bg-blue-50/50">-</td><td id="usage_${item.id}_total_${dIdx}" class="font-black text-emerald-700 bg-emerald-50">-</td></tr>`).join('');
+                    tableHead = `<tr><th style="width:90px;">日期</th><th>A剩餘(升)</th><th>B剩餘(升)</th><th>A本次換桶數</th><th>B本次換桶數</th><th>A用量(升)</th><th>B用量(升)</th><th>總用量(升)</th></tr>`;
+                    tableBody = `<tr><td colspan="8" style="white-space:normal" class="text-sm text-blue-800 bg-blue-50">每桶12升；換桶數填「前次讀數至本次讀數」的換桶次數，按＋換桶可累加，−可取消。空白＝舊版自動判斷，0＝沒換桶。用量依原規則由本列至下一列計算，因此本次換桶計入前一列用量。修改後請儲存至雲端。</td></tr>` +
+                    dates.map((dateStr, dIdx) => `<tr data-date-idx="${dIdx}"><td class="font-semibold bg-gray-50 text-sm">${dateStr}</td>${['a','b'].map(side => `<td><input type="number" min="0" max="12" step="0.01" class="cell-input" id="${item.id}_${side}_${dIdx}" data-id="${item.id}_${side}_${dIdx}" oninput="calcMasterTable()"></td>`).join('')}${['a','b'].map(side => `<td>${tankControls(item.id + '_swap_' + side + '_' + dIdx, true)}</td>`).join('')}<td id="usage_${item.id}_a_${dIdx}" class="font-bold text-blue-600">-</td><td id="usage_${item.id}_b_${dIdx}" class="font-bold text-blue-600">-</td><td id="usage_${item.id}_total_${dIdx}" class="font-bold text-emerald-700">-</td></tr>`).join('');
                 } else if (item.id === 'gas1') {
                     tableHead = `<tr><th style="width: 140px;">日期</th><th>瓦斯1讀數</th><th>瓦斯1用量</th><th>瓦斯2讀數</th><th>瓦斯2用量</th><th>總用量</th></tr>`;
                     let topRow = `<tr class="bg-amber-50"><td class="font-bold text-amber-800 text-sm border-r border-amber-200">🔄 上月底讀數</td><td><input type="number" step="0.01" class="cell-input border-amber-400 bg-white" id="gas1_prev" data-id="gas1_prev" oninput="calcMasterTable()"></td><td class="text-gray-400">-</td><td><input type="number" step="0.01" class="cell-input border-amber-400 bg-white" id="gas2_prev" data-id="gas2_prev" oninput="calcMasterTable()"></td><td class="text-gray-400">-</td><td class="text-gray-400">-</td></tr>`;
@@ -494,12 +529,19 @@
             return null;
         }
 
-        function getTankUsage(currStr, nextStr) {
+        function getTankUsage(currStr, nextStr, swapStr = '') {
             if (!currStr || currStr.trim() === '' || !nextStr || nextStr.trim() === '') return null;
             let c = parseFloat(currStr); 
             let n = parseFloat(nextStr);
             if (isNaN(c) || isNaN(n)) return null;
 
+            if (!validTankReading(currStr) || !validTankReading(nextStr)) return null;
+            if (swapStr !== '') {
+                const swaps = Number(swapStr);
+                if (!Number.isInteger(swaps) || swaps < 0) return null;
+                const exact = c + swaps * 12 - n;
+                return exact < 0 ? null : Math.round(exact * 100) / 100;
+            }
             let usage = 0;
             if (c >= n) {
                 // 正常消耗 (今天刻度 >= 明天刻度)
@@ -533,7 +575,8 @@
                     } else if (item.type === 'dual') {
                         let currA = document.getElementById(`${item.id}_a_${dIdx}`)?.value; let currB = document.getElementById(`${item.id}_b_${dIdx}`)?.value;
                         let nextA = document.getElementById(`${item.id}_a_${dIdx + 1}`)?.value; let nextB = document.getElementById(`${item.id}_b_${dIdx + 1}`)?.value;
-                        let diffA = getTankUsage(currA, nextA); let diffB = getTankUsage(currB, nextB);
+                        let diffA = getTankUsage(currA, nextA, document.getElementById(`${item.id}_swap_a_${dIdx + 1}`)?.value || '');
+                        let diffB = getTankUsage(currB, nextB, document.getElementById(`${item.id}_swap_b_${dIdx + 1}`)?.value || '');
                         if(document.getElementById(`usage_${item.id}_a_${dIdx}`)) document.getElementById(`usage_${item.id}_a_${dIdx}`).innerText = diffA !== null ? diffA.toFixed(2) : '-';
                         if(document.getElementById(`usage_${item.id}_b_${dIdx}`)) document.getElementById(`usage_${item.id}_b_${dIdx}`).innerText = diffB !== null ? diffB.toFixed(2) : '-';
                         let totalVal = null;
