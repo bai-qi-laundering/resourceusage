@@ -94,13 +94,13 @@
     </div>
 
     <div id="fieldWorkerView" class="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center p-4" style="display: none;">
-        <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md text-center">
+        <div id="fieldWorkerCard" class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md text-center">
             <div class="bg-blue-600 p-4 rounded-xl text-white mb-6">
                 <h2 class="text-2xl font-bold" id="field-device-title">載入中...</h2>
-                <p class="text-sm text-blue-100 mt-1">現場數據雲端直傳</p>
+                <p class="text-sm text-blue-100 mt-1" id="field-device-subtitle">現場數據雲端直傳</p>
             </div>
             <div class="mb-4 text-left">
-                <label class="block text-sm font-bold text-gray-700 mb-1">📅 選擇填報日期：</label>
+                <label class="block text-sm font-bold text-gray-700 mb-1" id="fieldDateLabel">📅 選擇填報日期：</label>
                 <select id="fieldTargetDate" class="w-full p-3 rounded-lg border border-gray-300 font-semibold bg-gray-50 text-base"></select>
             </div>
             <div id="field-inputs-container" class="mb-6 text-left"></div>
@@ -130,7 +130,14 @@
         let currentYear, currentMonth, daysInMonth, titleText;
         let currentQueryMonth = ""; 
         let activeFieldItem = null;
-        let originalCloudData = {}; 
+        let originalCloudData = {};
+        let easyCloudReady = false;
+        let easyPrevMonthCache = { key: '', rows: null };
+        let easyBusy = false;
+        const easySidePick = { field: '', admin: '' };
+        const easyAmbiguousPick = {};
+        const easyAmbiguousKey = { field: '', admin: '' };
+        const easyPreviewToken = { field: 0, admin: 0 }; 
 
         const items = [
             { id: 'boiler1', label: '蒸氣高燃鍋爐', type: 'time_oc' },
@@ -153,6 +160,18 @@
             
             const urlParams = new URLSearchParams(window.location.search);
             const qrParam = urlParams.get('qr');
+
+            if (qrParam === 'soft_ab_easy') {
+                document.getElementById('mainNav').style.display = 'none';
+                document.getElementById('mainContainer').style.display = 'none';
+                initEasyFieldWorker();
+                if (SCRIPT_URL.includes('請將您部署後的')) {
+                    showToast('請務必在程式碼中設定 API 網址才能儲存！', 'error');
+                } else {
+                    fetchDataFromCloud();
+                }
+                return;
+            }
             
             if (qrParam) {
                 const targetItem = items.find(i => i.id === qrParam);
@@ -205,6 +224,8 @@
 
         function loadTargetMonth(yyyyMM) {
             if(!yyyyMM) return;
+            easyCloudReady = false;
+            easyPrevMonthCache = { key: '', rows: null };
             initCalendar(yyyyMM);
             fetchDataFromCloud(); 
         }
@@ -214,10 +235,17 @@
             printArea.innerHTML = '';
             const baseUrl = window.location.href.split('?')[0];
 
-            items.forEach(item => {
+            const qrItems = items.map(item => ({ id: item.id, label: item.label, easy: false }));
+            const softAt = qrItems.findIndex(item => item.id === 'soft_ab');
+            qrItems.splice(softAt + 1, 0, { id: 'soft_ab_easy', label: '小支軟水A/B（新版抄表）', easy: true });
+            qrItems.forEach(item => {
                 const targetUrl = `${baseUrl}?qr=${item.id}`;
                 const qrImgSrc = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(targetUrl)}`;
-                printArea.innerHTML += `<div class="flex flex-col items-center bg-white p-6 rounded-xl shadow-sm border border-gray-200"><h3 class="text-xl font-bold text-gray-800 mb-4">${item.label}</h3><img src="${qrImgSrc}" alt="${item.label} QR Code" class="w-40 h-40 object-contain mb-3 border p-1"><p class="text-xs text-gray-400 break-all w-full text-center truncate">掃描即開啟填報畫面</p></div>`;
+                if (item.easy) {
+                    printArea.innerHTML += `<div class="flex flex-col items-center bg-white p-6 rounded-xl shadow-sm border-2 border-amber-400"><p class="text-xs font-bold text-amber-700 mb-1">新版抄表</p><h3 class="text-xl font-bold text-gray-800 mb-4 text-center">${item.label}</h3><img src="${qrImgSrc}" alt="${item.label} QR Code" class="w-40 h-40 object-contain mb-3 border p-1"><p class="text-xs text-gray-400 break-all w-full text-center">只填螢幕上正在跑的那一桶</p></div>`;
+                } else {
+                    printArea.innerHTML += `<div class="flex flex-col items-center bg-white p-6 rounded-xl shadow-sm border border-gray-200"><h3 class="text-xl font-bold text-gray-800 mb-4">${item.label}</h3><img src="${qrImgSrc}" alt="${item.label} QR Code" class="w-40 h-40 object-contain mb-3 border p-1"><p class="text-xs text-gray-400 break-all w-full text-center truncate">掃描即開啟填報畫面</p></div>`;
+                }
             });
             document.getElementById('qrModal').classList.remove('hidden');
             document.getElementById('qrModal').classList.add('flex');
@@ -260,6 +288,8 @@
 
         async function fetchDataFromCloud() {
             if (SCRIPT_URL.includes('請將您部署後')) return;
+            easyCloudReady = false;
+            easyPrevMonthCache = { key: '', rows: null };
             showLoading('從雲端載入資料中...');
             try {
                 const joinChar = SCRIPT_URL.includes('?') ? '&' : '?';
@@ -281,9 +311,13 @@
                     }
                 }
                 calcMasterTable();
+                easyCloudReady = true;
                 showToast(`✅ ${titleText} 雲端資料同步完成！`, 'success');
+                notifyEasyMeters();
             } catch (error) {
+                easyCloudReady = false;
                 showToast('❌ 讀取雲端資料失敗，請確認網路設定。', 'error');
+                notifyEasyMeters();
             } finally { hideLoading(); }
         }
 
@@ -486,6 +520,7 @@
                 }
                 contentContainer.innerHTML += `<div id="${tabId}" class="tab-content bg-white p-4 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0"><div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4"><h2 class="text-xl font-bold text-blue-800">📌 ${item.id === 'gas1' ? '瓦斯1 / 瓦斯2' : item.id === 'water_l' ? '大支自來水 / 小支自來水' : item.id === 'soft_a' ? '大支軟水 / 錳砂' : item.label} - 每日度數紀錄</h2><div class="flex flex-wrap gap-2 print-hide"><button onclick="syncDataToCloud()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">☁ 儲存至雲端</button><button onclick="takeScreenshot()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow text-sm font-medium flex items-center gap-1">📸 截圖分享 (10天)</button></div></div><div class="table-container"><table class="fixed-table"><thead>${tableHead}</thead><tbody>${tableBody}</tbody></table></div></div>`;
             });
+            appendEasyMeterTab();
             calcMasterTable();
         }
 
@@ -495,6 +530,7 @@
             document.getElementById(tabId).classList.add('active');
             document.getElementById(`btn-${tabId}`).classList.add('active');
             if (tabId === 'tab-master') calcMasterTable();
+            if (tabId === 'tab-soft-ab-easy') ensureEasyQrPreview();
         }
 
         function handleCloseInput(itemId, dIdx) {
@@ -552,6 +588,635 @@
             }
             return Math.max(0, Math.round(usage * 100) / 100);
         }
+
+
+        /* EASY_PURE_START */
+        // 新版抄表純計算：跟舊版同一個 soft_ab_a/b、soft_ab_swap_a/b。
+        // 逆洗數寫在「這次讀數」那一列，總表用下一列的逆洗數算出前一列用量。
+        function roundTank(n) {
+            return Math.round(Number(n) * 100) / 100;
+        }
+        function formatRemain(n) {
+            const r = roundTank(n);
+            if (!Number.isFinite(r)) return '';
+            return String(r);
+        }
+        function isFullTank(n) {
+            return n != null && Math.abs(Number(n) - 12) < 0.001;
+        }
+        function parseCloudCell(raw) {
+            if (raw == null) return '';
+            let v = String(raw).trim();
+            if (v.startsWith("'")) v = v.slice(1).trim();
+            if (v.includes('跑位')) return '';
+            return v;
+        }
+        function parseTankField(raw) {
+            const v = parseCloudCell(raw);
+            if (v === '' || !validTankReading(v)) return null;
+            return Number(v);
+        }
+        function parseSwapField(raw) {
+            const v = parseCloudCell(raw);
+            if (v === '') return null;
+            const n = Number(v);
+            if (!Number.isInteger(n) || n < 0) return null;
+            return n;
+        }
+        function rowFromParts(aRaw, bRaw, saRaw, sbRaw) {
+            return {
+                aRaw: parseCloudCell(aRaw),
+                bRaw: parseCloudCell(bRaw),
+                swapARaw: parseCloudCell(saRaw),
+                swapBRaw: parseCloudCell(sbRaw),
+                a: parseTankField(aRaw),
+                b: parseTankField(bRaw),
+                swapA: parseSwapField(saRaw),
+                swapB: parseSwapField(sbRaw)
+            };
+        }
+        function isFilledRow(row) {
+            return !!(row && (row.a != null || row.b != null));
+        }
+        function previousMonthMeta(yyyyMM) {
+            const parts = String(yyyyMM).split('-');
+            const y = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10);
+            const d = new Date(y, m - 1, 1);
+            d.setDate(0);
+            const pm = d.getMonth() + 1;
+            return {
+                key: d.getFullYear() + '-' + String(pm).padStart(2, '0'),
+                days: d.getDate()
+            };
+        }
+        function locatePrevious(currRows, targetIdx, prevRows, prevDays) {
+            for (let i = targetIdx - 1; i >= 0; i--) {
+                if (currRows[i] && isFilledRow(currRows[i])) {
+                    return {
+                        none: false,
+                        rows: currRows,
+                        index: i,
+                        adjacent: i === targetIdx - 1,
+                        crossMonth: false,
+                        bridge: false,
+                        sheet: 'current'
+                    };
+                }
+            }
+            if (!prevRows || prevDays == null) return { none: true };
+            const start = targetIdx > 0 ? prevDays : prevDays - 1;
+            for (let i = start; i >= 0 && i < prevRows.length; i--) {
+                if (isFilledRow(prevRows[i])) {
+                    return {
+                        none: false,
+                        rows: prevRows,
+                        index: i,
+                        adjacent: false,
+                        crossMonth: true,
+                        bridge: i === prevDays,
+                        sheet: 'prev'
+                    };
+                }
+            }
+            return { none: true, crossMonth: true };
+        }
+        function activeFromTookOver(swapA, swapB) {
+            if (swapA == null || swapB == null) return null;
+            if (swapA > 0 && swapB === 0) return 'b';
+            if (swapB > 0 && swapA === 0) return 'a';
+            return null;
+        }
+        function activeFromNextSwaps(next) {
+            if (!next || next.swapA == null || next.swapB == null) return null;
+            if (next.swapA > 0 && next.swapB === 0) return 'a';
+            if (next.swapB > 0 && next.swapA === 0) return 'b';
+            if (next.a == null || next.b == null) return null;
+            if (!isFullTank(next.a) && isFullTank(next.b)) return 'a';
+            if (!isFullTank(next.b) && isFullTank(next.a)) return 'b';
+            return null;
+        }
+        function inferActiveTank(rows, index, seen, skipNextIndex) {
+            if (!rows || index < 0 || index >= rows.length) return { ambiguous: true, reason: 'missing' };
+            if (!seen) seen = new Set();
+            if (seen.has(index)) return { ambiguous: true, reason: 'cycle' };
+            seen.add(index);
+            const row = rows[index];
+            if (!row || (row.a == null && row.b == null)) return { ambiguous: true, reason: 'empty' };
+            const aFull = isFullTank(row.a);
+            const bFull = isFullTank(row.b);
+            if (row.a != null && row.b != null) {
+                if (!aFull && bFull) return { side: 'a', remain: roundTank(row.a), source: 'reading' };
+                if (aFull && !bFull) return { side: 'b', remain: roundTank(row.b), source: 'reading' };
+                if (!aFull && !bFull) return { ambiguous: true, reason: 'both-partial' };
+                const tookOver = activeFromTookOver(row.swapA, row.swapB);
+                if (tookOver) return { side: tookOver, remain: 12, source: 'this-swap' };
+                const next = (skipNextIndex != null && index + 1 === skipNextIndex) ? null : rows[index + 1];
+                const fromNext = activeFromNextSwaps(next);
+                if (fromNext) return { side: fromNext, remain: 12, source: 'next-swap' };
+                if (row.swapA != null && row.swapB != null && row.swapA === row.swapB && index > 0) {
+                    const prev = inferActiveTank(rows, index - 1, seen, skipNextIndex);
+                    if (prev && !prev.ambiguous) return { side: prev.side, remain: 12, source: 'walk-back' };
+                }
+                return { ambiguous: true, reason: 'both-12' };
+            }
+            if (row.a != null && !aFull) return { side: 'a', remain: roundTank(row.a), source: 'only-a' };
+            if (row.b != null && !bFull) return { side: 'b', remain: roundTank(row.b), source: 'only-b' };
+            return { ambiguous: true, reason: 'incomplete' };
+        }
+        function resolveActiveTank(rows, index, skipNextIndex, overrideSide) {
+            const inferred = inferActiveTank(rows, index, null, skipNextIndex);
+            if (!inferred.ambiguous) return inferred;
+            if (overrideSide === 'a' || overrideSide === 'b') {
+                const row = rows[index];
+                const remain = overrideSide === 'a' ? row.a : row.b;
+                if (remain == null) return inferred;
+                return { side: overrideSide, remain: roundTank(remain), source: 'staff', ambiguous: false };
+            }
+            return inferred;
+        }
+        function inferEasySwap(prevSide, prevRemain, nowSide, nowRemain) {
+            prevRemain = roundTank(prevRemain);
+            nowRemain = roundTank(nowRemain);
+            const other = prevSide === 'a' ? 'B' : 'A';
+            const prevName = String(prevSide || '').toUpperCase();
+            const nowName = String(nowSide || '').toUpperCase();
+            const show = (n) => formatRemain(n);
+            if (nowSide === prevSide) {
+                if (nowRemain === prevRemain && isFullTank(nowRemain)) {
+                    return {
+                        swapA: 0, swapB: 0, usage: 0, kind: 'unchanged', needsDoubleConfirm: false,
+                        washText: '這一期沒有逆洗',
+                        formula: '同一桶 ' + nowName + '，上一筆和這次都是 12 噸，沒有變化。用量 = 0 噸。'
+                    };
+                }
+                if (nowRemain <= prevRemain) {
+                    const usage = roundTank(prevRemain - nowRemain);
+                    const formula = nowRemain === prevRemain
+                        ? ('同一桶 ' + nowName + '，剩餘仍是 ' + show(prevRemain) + ' 噸，沒有換桶。用量 = 0 噸。')
+                        : ('同一桶 ' + nowName + '，剩餘從 ' + show(prevRemain) + ' 噸降到 ' + show(nowRemain) + ' 噸，沒有換桶。用量 = ' + show(prevRemain) + ' − ' + show(nowRemain) + ' = ' + usage.toFixed(2) + ' 噸。');
+                    return {
+                        swapA: 0, swapB: 0, usage: usage, kind: 'drawdown', needsDoubleConfirm: false,
+                        washText: '這一期沒有逆洗',
+                        formula: formula
+                    };
+                }
+                const usage = roundTank(prevRemain + 12 + (12 - nowRemain));
+                return {
+                    swapA: 1, swapB: 1, usage: usage, kind: 'double', needsDoubleConfirm: true,
+                    washText: 'A 洗 1 支、B 洗 1 支',
+                    formula: '螢幕仍是 ' + nowName + ' 桶，但剩餘從 ' + show(prevRemain) + ' 噸變成 ' + show(nowRemain) + ' 噸，代表中間兩桶各用完一次（' + prevName + '→' + other + '→' + prevName + '）。用量 = ' + show(prevRemain) + ' + 12 + (12 − ' + show(nowRemain) + ') = ' + usage.toFixed(2) + ' 噸。'
+                };
+            }
+            const swapA = prevSide === 'a' ? 1 : 0;
+            const swapB = prevSide === 'b' ? 1 : 0;
+            const usage = roundTank(prevRemain + (12 - nowRemain));
+            return {
+                swapA: swapA, swapB: swapB, usage: usage, kind: 'switch', needsDoubleConfirm: false,
+                washText: prevName + ' 洗 1 支',
+                formula: '上一筆是 ' + prevName + ' 桶 ' + show(prevRemain) + ' 噸，這次換成 ' + nowName + ' 桶 ' + show(nowRemain) + ' 噸，代表 ' + prevName + ' 用完並逆洗 1 次。用量 = ' + show(prevRemain) + ' + (12 − ' + show(nowRemain) + ') = ' + usage.toFixed(2) + ' 噸。'
+            };
+        }
+        function fieldsForReading(dateIdx, side, remain, inferred) {
+            const other = side === 'a' ? 'b' : 'a';
+            const fields = {};
+            fields['soft_ab_' + side + '_' + dateIdx] = formatRemain(remain);
+            fields['soft_ab_' + other + '_' + dateIdx] = '12';
+            fields['soft_ab_swap_a_' + dateIdx] = String(inferred.swapA);
+            fields['soft_ab_swap_b_' + dateIdx] = String(inferred.swapB);
+            return fields;
+        }
+        function projectedUsage(prevRow, side, remain, inferred) {
+            if (!prevRow || prevRow.a == null || prevRow.b == null) return null;
+            const currA = side === 'a' ? roundTank(Number(remain)) : 12;
+            const currB = side === 'b' ? roundTank(Number(remain)) : 12;
+            const ua = getTankUsage(formatRemain(prevRow.a), formatRemain(currA), String(inferred.swapA));
+            const ub = getTankUsage(formatRemain(prevRow.b), formatRemain(currB), String(inferred.swapB));
+            if (ua == null || ub == null) return null;
+            return roundTank(ua + ub);
+        }
+        /* EASY_PURE_END */
+
+        function currentSoftRows() {
+            const rows = [];
+            for (let i = 0; i < dates.length; i++) {
+                rows.push(rowFromParts(
+                    document.getElementById('soft_ab_a_' + i)?.value,
+                    document.getElementById('soft_ab_b_' + i)?.value,
+                    document.getElementById('soft_ab_swap_a_' + i)?.value,
+                    document.getElementById('soft_ab_swap_b_' + i)?.value
+                ));
+            }
+            return rows;
+        }
+        function ambKeyOf(found) {
+            return found.sheet + '|' + (found.monthKey || currentQueryMonth) + '|' + found.index;
+        }
+        function defaultEasyDateIndex() {
+            const td = new Date();
+            let todayIdx = td.getDate() - 1;
+            todayIdx += 1;
+            if (todayIdx >= dates.length) todayIdx = dates.length - 1;
+            if (todayIdx < 0) todayIdx = 0;
+            return todayIdx;
+        }
+        function easyMeterUrl() {
+            const base = window.location.href.split('?')[0].split('#')[0];
+            return base + '?qr=soft_ab_easy';
+        }
+        function escHtml(s) {
+            return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+        async function fetchMonthRaw(yyyyMM) {
+            const joinChar = SCRIPT_URL.includes('?') ? '&' : '?';
+            const response = await fetch(SCRIPT_URL + joinChar + 'month=' + encodeURIComponent(yyyyMM), { method: 'GET' });
+            return await response.json();
+        }
+        async function loadPrevMonthRows(meta) {
+            if (easyPrevMonthCache.key === meta.key && Array.isArray(easyPrevMonthCache.rows)) return easyPrevMonthCache.rows;
+            const data = await fetchMonthRaw(meta.key);
+            if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+            if (data.status && data.status !== 'success') return null;
+            const rows = [];
+            for (let i = 0; i <= meta.days; i++) {
+                rows.push(rowFromParts(
+                    data['soft_ab_a_' + i],
+                    data['soft_ab_b_' + i],
+                    data['soft_ab_swap_a_' + i],
+                    data['soft_ab_swap_b_' + i]
+                ));
+            }
+            easyPrevMonthCache = { key: meta.key, rows: rows };
+            return rows;
+        }
+        function labelPrevMonthRow(meta, index) {
+            if (index === meta.days) return (dates[0] || '本月1號') + '（記在上個月表格的次月1號）';
+            const parts = meta.key.split('-').map(Number);
+            const weekdays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+            const dt = new Date(parts[0], parts[1] - 1, index + 1);
+            const mm = String(parts[1]).padStart(2, '0');
+            const dd = String(index + 1).padStart(2, '0');
+            return mm + '/' + dd + ' (' + weekdays[dt.getDay()] + ')';
+        }
+        async function findPreviousReading(targetIdx) {
+            const curr = currentSoftRows();
+            const local = locatePrevious(curr, targetIdx, null, null);
+            if (!local.none) {
+                return Object.assign({}, local, { dateLabel: dates[local.index] || '', monthKey: currentQueryMonth, cloudError: false });
+            }
+            const meta = previousMonthMeta(currentQueryMonth);
+            try {
+                const prevRows = await loadPrevMonthRows(meta);
+                if (!prevRows) return { none: true, cloudError: true };
+                const found = locatePrevious(curr, targetIdx, prevRows, meta.days);
+                if (found.none) return { none: true, cloudError: false };
+                return Object.assign({}, found, { dateLabel: labelPrevMonthRow(meta, found.index), monthKey: meta.key, cloudError: false });
+            } catch (error) {
+                return { none: true, cloudError: true };
+            }
+        }
+        function bridgeCopyFields(row) {
+            const fields = {};
+            if (row.aRaw !== '') fields['soft_ab_a_0'] = row.aRaw;
+            else if (row.a != null) fields['soft_ab_a_0'] = formatRemain(row.a);
+            if (row.bRaw !== '') fields['soft_ab_b_0'] = row.bRaw;
+            else if (row.b != null) fields['soft_ab_b_0'] = formatRemain(row.b);
+            if (row.swapARaw !== '') fields['soft_ab_swap_a_0'] = row.swapARaw;
+            if (row.swapBRaw !== '') fields['soft_ab_swap_b_0'] = row.swapBRaw;
+            return fields;
+        }
+        function applyFieldsToDom(fields) {
+            Object.keys(fields).forEach((key) => {
+                const input = document.getElementById(key);
+                if (input) input.value = fields[key];
+            });
+            calcMasterTable();
+        }
+        async function postEasyFields(fields) {
+            const data = Object.assign({ meta_month: currentQueryMonth }, fields);
+            const response = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            if (!result || result.status !== 'success') throw new Error('save failed');
+            Object.keys(fields).forEach((key) => { originalCloudData[key] = fields[key]; });
+            applyFieldsToDom(fields);
+        }
+        function writeLine(dateIdx, side, remainRaw, inferred) {
+            const other = side === 'a' ? 'b' : 'a';
+            const label = dates[dateIdx] || '';
+            return '寫入 ' + label + '：' + side.toUpperCase() + ' 剩餘 ' + formatRemain(remainRaw) + ' 噸、' + other.toUpperCase() + ' 剩餘 12 噸、A 逆洗 ' + inferred.swapA + '、B 逆洗 ' + inferred.swapB;
+        }
+        function summaryBox(kind, text) {
+            const cls = kind === 'bad' ? 'border-red-200 bg-red-50 text-red-800' : 'border-gray-200 bg-white text-gray-600';
+            return '<div class="rounded-xl border-2 ' + cls + ' p-4 text-sm leading-relaxed">' + escHtml(text) + '</div>';
+        }
+        function summaryHtml(prefix, parts) {
+            return '<div class="rounded-xl border-2 border-blue-200 bg-blue-50 p-4">' +
+                '<p class="text-sm text-gray-600">' + escHtml(parts.prevLine) + '</p>' +
+                '<p class="text-sm text-gray-500 mt-2">這一期用量</p>' +
+                '<p class="text-3xl font-black text-blue-800" id="' + prefix + 'EasyUsage">' + escHtml(parts.usageText) + '</p>' +
+                '<p class="text-lg font-bold text-emerald-700 mt-1" id="' + prefix + 'EasyWash">' + escHtml(parts.washText) + '</p>' +
+                '<p class="text-sm text-gray-800 mt-3 leading-relaxed"><span class="font-bold">算法：</span>' + escHtml(parts.formula) + '</p>' +
+                '<p class="text-xs text-gray-500 mt-3 leading-relaxed">' + escHtml(parts.writeLine) + '</p>' +
+                (parts.extra || '') +
+                '</div>';
+        }
+        function ambiguousHtml(prefix, found, resolved) {
+            const row = found.rows[found.index];
+            let reason = '請選當時螢幕顯示的是哪一桶。選一次之後會記住。';
+            if (resolved.reason === 'both-12') reason = '上一筆兩桶都是 12 噸，逆洗紀錄分不出當時螢幕是哪一桶。請選一次，之後會記住。';
+            if (resolved.reason === 'both-partial') reason = '上一筆 A、B 都不是 12 噸。請點當時螢幕實際顯示的那一桶。';
+            if (resolved.reason === 'incomplete') reason = '上一筆有一側沒有數字。請點當時螢幕上的那一桶；沒填數字的那側不能選。';
+            const btn = (side) => {
+                const val = side === 'a' ? row.a : row.b;
+                if (val == null) return '<button type="button" disabled class="py-3 rounded-xl border-2 border-gray-200 text-gray-400 font-bold">' + side.toUpperCase() + ' 無讀數</button>';
+                const color = side === 'a' ? 'border-blue-400 text-blue-800' : 'border-emerald-400 text-emerald-800';
+                return '<button type="button" class="py-3 rounded-xl border-2 ' + color + ' font-black text-xl bg-white" onclick="chooseEasyAmbiguous(\'' + prefix + '\',\'' + side + '\')">' + side.toUpperCase() + ' 桶 ' + escHtml(formatRemain(val)) + ' 噸</button>';
+            };
+            return '<div class="rounded-xl border-2 border-amber-300 bg-amber-50 p-4">' +
+                '<p class="font-bold text-amber-950">要先確認上一筆</p>' +
+                '<p class="text-sm text-amber-900 mt-1">' + escHtml(found.dateLabel) + '</p>' +
+                '<p class="text-sm text-amber-900 mt-2 leading-relaxed">' + escHtml(reason) + '</p>' +
+                '<div class="grid grid-cols-2 gap-2 mt-3">' + btn('a') + btn('b') + '</div>' +
+                '</div>';
+        }
+        function readEasyDateIdx(prefix) {
+            const el = document.getElementById(prefix === 'field' ? 'fieldTargetDate' : 'adminEasyDate');
+            if (!el || el.value === '') return null;
+            const n = parseInt(el.value, 10);
+            if (!Number.isInteger(n) || n < 0 || n >= dates.length) return null;
+            return n;
+        }
+        async function buildEasyView(prefix) {
+            const idle = '確認無誤，送出寫入';
+            if (!easyCloudReady) {
+                return { canSubmit: false, buttonText: idle, html: summaryBox('muted', '雲端資料載入中，請稍候再抄表。上一筆還沒讀到之前不能送出，避免逆洗數算錯。') };
+            }
+            const dateIdx = readEasyDateIdx(prefix);
+            if (dateIdx == null) {
+                return { canSubmit: false, buttonText: idle, html: summaryBox('muted', '請選擇寫入日期。') };
+            }
+            const side = easySidePick[prefix];
+            const remainRaw = (document.getElementById(prefix + 'EasyRemain')?.value || '').trim();
+            if (!side) {
+                return { canSubmit: false, buttonText: idle, html: summaryBox('muted', '請先點螢幕上顯示的是 A 桶還是 B 桶。') };
+            }
+            if (remainRaw === '') {
+                return { canSubmit: false, buttonText: idle, html: summaryBox('muted', '請填螢幕上的剩餘噸數（0～12，12 也可以）。') };
+            }
+            if (!validTankReading(remainRaw)) {
+                return { canSubmit: false, buttonText: idle, html: summaryBox('bad', '剩餘噸數要介於 0 和 12。剛換桶請直接填 12。') };
+            }
+            const found = await findPreviousReading(dateIdx);
+            if (found.cloudError) {
+                return { canSubmit: false, buttonText: idle, html: summaryBox('bad', '讀不到更早的抄表（含上個月）。請檢查網路後按同步，再試一次。沒對到上一筆不能送出，避免把逆洗數記成 0。') };
+            }
+            if (found.none) {
+                const inferred = {
+                    swapA: 0, swapB: 0, usage: null, kind: 'baseline', needsDoubleConfirm: false,
+                    washText: '這是第一筆，逆洗數記 0',
+                    formula: '目前找不到更早的抄表。這筆只把螢幕上的桶記下來，另一桶記 12 噸，逆洗數記 0。等下一筆抄表，總表才算得出用量。'
+                };
+                return {
+                    canSubmit: true,
+                    buttonText: '確認寫入第一筆',
+                    needsDoubleConfirm: false,
+                    fields: fieldsForReading(dateIdx, side, remainRaw, inferred),
+                    html: summaryHtml(prefix, {
+                        usageText: '尚無上一筆',
+                        washText: inferred.washText,
+                        formula: inferred.formula,
+                        prevLine: '上一筆：沒有',
+                        writeLine: writeLine(dateIdx, side, remainRaw, inferred),
+                        extra: ''
+                    })
+                };
+            }
+            const key = ambKeyOf(found);
+            easyAmbiguousKey[prefix] = key;
+            const resolved = resolveActiveTank(found.rows, found.index, found.crossMonth ? null : dateIdx, easyAmbiguousPick[key]);
+            if (resolved.ambiguous) {
+                return { canSubmit: false, buttonText: idle, html: ambiguousHtml(prefix, found, resolved) };
+            }
+            const inferred = inferEasySwap(resolved.side, resolved.remain, side, Number(remainRaw));
+            const fields = fieldsForReading(dateIdx, side, remainRaw, inferred);
+            let extra = '';
+            const willBridge = !!(found.bridge && dateIdx === 1);
+            if (willBridge) {
+                Object.assign(fields, bridgeCopyFields(found.rows[found.index]));
+                extra += '<p class="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2">上一筆記在上個月表格的「次月1號」。本月 1 號還是空的，送出時會一併補上，總表才算得出這一天的用量。</p>';
+            } else if (!found.adjacent) {
+                extra += '<p class="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2">上一筆不是日曆上的前一天（中間有空日，或在上個月）。總表是相鄰兩列相減，這筆用量可能不會出現在總表。若要對得起來，請把日期改到上一筆的隔天，或先補上中間的空日。</p>';
+            }
+            if ((found.adjacent || willBridge) && inferred.usage != null) {
+                const projected = projectedUsage(found.rows[found.index], side, remainRaw, inferred);
+                if (projected != null && Math.abs(projected - inferred.usage) > 0.01) {
+                    extra += '<p class="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2">上一筆不是「使用中的桶 + 另一桶 12」這種格式，總表依舊算法會顯示 ' + projected.toFixed(2) + ' 噸，和新版公式的 ' + inferred.usage.toFixed(2) + ' 噸不同。若要跟總表一致，請先到舊版分頁把上一筆整理好。</p>';
+                }
+            }
+            if (inferred.needsDoubleConfirm) {
+                extra += '<p class="text-sm font-bold text-amber-900 bg-amber-100 border border-amber-300 rounded-lg p-3 mt-2">剩餘比上一筆多，代表中間兩桶各用完一次。請再確認這一班 A、B 都確實逆洗了，才按送出。</p>';
+            }
+            if (resolved.source === 'staff') {
+                extra += '<button type="button" class="mt-2 text-sm font-bold text-blue-700 underline" onclick="clearEasyAmbiguous(\'' + prefix + '\')">重選上一筆的桶</button>';
+            }
+            let prevHow = '';
+            if (resolved.source === 'this-swap' || resolved.source === 'next-swap' || resolved.source === 'walk-back') prevHow = '（兩桶都是 12 噸，依逆洗紀錄判斷）';
+            else if (resolved.source === 'staff') prevHow = '（這次由你指定）';
+            return {
+                canSubmit: true,
+                buttonText: inferred.needsDoubleConfirm ? '確認兩桶都逆洗並送出' : idle,
+                needsDoubleConfirm: !!inferred.needsDoubleConfirm,
+                confirmText: '系統判斷這一期 A、B 各逆洗 1 次，用量 ' + inferred.usage.toFixed(2) + ' 噸。確定寫入嗎？',
+                fields: fields,
+                html: summaryHtml(prefix, {
+                    usageText: inferred.usage.toFixed(2) + ' 噸',
+                    washText: inferred.washText,
+                    formula: inferred.formula,
+                    prevLine: '上一筆：' + found.dateLabel + '　' + resolved.side.toUpperCase() + ' 桶 ' + formatRemain(resolved.remain) + ' 噸' + prevHow,
+                    writeLine: writeLine(dateIdx, side, remainRaw, inferred),
+                    extra: extra
+                })
+            };
+        }
+        function renderEasySummary(prefix, view) {
+            const box = document.getElementById(prefix + 'EasySummary');
+            const btn = document.getElementById(prefix === 'field' ? 'fieldSubmitBtn' : 'adminEasySubmit');
+            if (box) box.innerHTML = view.html;
+            if (btn && !easyBusy) {
+                btn.disabled = !view.canSubmit;
+                btn.innerText = view.buttonText || '確認無誤，送出寫入';
+                btn.classList.toggle('opacity-50', !view.canSubmit);
+                btn.classList.toggle('cursor-not-allowed', !view.canSubmit);
+            }
+        }
+        async function refreshEasyPreview(prefix) {
+            if (!document.getElementById(prefix + 'EasyRemain')) return;
+            const token = (easyPreviewToken[prefix] || 0) + 1;
+            easyPreviewToken[prefix] = token;
+            try {
+                const view = await buildEasyView(prefix);
+                if (easyPreviewToken[prefix] !== token) return;
+                renderEasySummary(prefix, view);
+            } catch (error) {
+                if (easyPreviewToken[prefix] !== token) return;
+                renderEasySummary(prefix, { canSubmit: false, buttonText: '確認無誤，送出寫入', html: summaryBox('bad', '算用量時發生問題，請再試一次。') });
+            }
+        }
+        function notifyEasyMeters() {
+            if (document.getElementById('fieldEasyRemain')) refreshEasyPreview('field');
+            if (document.getElementById('adminEasyRemain')) refreshEasyPreview('admin');
+        }
+        function paintEasyTanks(prefix) {
+            const side = easySidePick[prefix];
+            const a = document.getElementById(prefix + 'EasyTankA');
+            const b = document.getElementById(prefix + 'EasyTankB');
+            if (!a || !b) return;
+            const base = 'min-h-[76px] rounded-xl text-3xl font-black border-2 transition-colors';
+            a.className = base + (side === 'a' ? ' bg-blue-600 text-white border-blue-700 shadow-lg' : ' bg-white text-blue-700 border-blue-300');
+            b.className = base + (side === 'b' ? ' bg-emerald-600 text-white border-emerald-700 shadow-lg' : ' bg-white text-emerald-700 border-emerald-300');
+        }
+        function chooseEasySide(prefix, side) {
+            easySidePick[prefix] = side;
+            paintEasyTanks(prefix);
+            refreshEasyPreview(prefix);
+        }
+        function chooseEasyAmbiguous(prefix, side) {
+            const key = easyAmbiguousKey[prefix];
+            if (key) easyAmbiguousPick[key] = side;
+            refreshEasyPreview(prefix);
+        }
+        function clearEasyAmbiguous(prefix) {
+            const key = easyAmbiguousKey[prefix];
+            if (key) delete easyAmbiguousPick[key];
+            refreshEasyPreview(prefix);
+        }
+        function bindEasyRemain(prefix) {
+            const input = document.getElementById(prefix + 'EasyRemain');
+            if (!input) return;
+            input.addEventListener('input', () => refreshEasyPreview(prefix));
+            input.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    submitEasyFromPrefix(prefix);
+                }
+            });
+            const a = document.getElementById(prefix + 'EasyTankA');
+            const b = document.getElementById(prefix + 'EasyTankB');
+            if (a) a.onclick = () => chooseEasySide(prefix, 'a');
+            if (b) b.onclick = () => chooseEasySide(prefix, 'b');
+        }
+        function easyFormInnerHtml(prefix) {
+            return '<p class="text-sm text-gray-600 mb-3 text-left leading-relaxed">看控制器螢幕現在顯示的那一桶，點 A 或 B，再填畫面上的剩餘噸數。剛換桶出現 12 也可以。不用記逆洗次數，系統會對上一筆自動判斷。</p>' +
+                '<div class="grid grid-cols-2 gap-3 mb-4">' +
+                '<button type="button" id="' + prefix + 'EasyTankA">A 桶</button>' +
+                '<button type="button" id="' + prefix + 'EasyTankB">B 桶</button>' +
+                '</div>' +
+                '<label class="block text-sm font-bold text-gray-700 mb-1 text-left" for="' + prefix + 'EasyRemain">螢幕剩餘（噸）</label>' +
+                '<input type="number" inputmode="decimal" min="0" max="12" step="0.01" id="' + prefix + 'EasyRemain" placeholder="例如 11.6" autocomplete="off" onwheel="this.blur()" class="w-full p-3.5 text-center text-3xl font-black border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600 bg-blue-50/30">' +
+                '<p class="text-xs text-gray-500 mt-1 text-left">可填 0～12，12 代表剛逆洗完的滿桶。</p>' +
+                '<div id="' + prefix + 'EasySummary" class="mt-4 text-left"></div>';
+        }
+        function initEasyFieldWorker() {
+            document.getElementById('field-device-title').innerText = '小支軟水A/B（新版抄表）';
+            const sub = document.getElementById('field-device-subtitle');
+            if (sub) sub.innerText = '只填螢幕上正在跑的那一桶';
+            const dateLabel = document.getElementById('fieldDateLabel');
+            if (dateLabel) dateLabel.innerText = '📅 寫入日期（收尾抄表預設明天，用量算在前一天）：';
+            const card = document.getElementById('fieldWorkerCard');
+            if (card) card.classList.add('max-h-[96vh]', 'overflow-y-auto');
+            const selectEl = document.getElementById('fieldTargetDate');
+            selectEl.innerHTML = '';
+            dates.forEach((dStr, idx) => { selectEl.innerHTML += '<option value="' + idx + '">' + dStr + '</option>'; });
+            selectEl.value = String(defaultEasyDateIndex());
+            selectEl.onchange = () => refreshEasyPreview('field');
+            document.getElementById('field-inputs-container').innerHTML = easyFormInnerHtml('field');
+            const btn = document.getElementById('fieldSubmitBtn');
+            btn.type = 'button';
+            btn.onclick = () => submitEasyFromPrefix('field');
+            bindEasyRemain('field');
+            paintEasyTanks('field');
+            document.getElementById('fieldWorkerView').style.display = 'flex';
+            refreshEasyPreview('field');
+        }
+        function appendEasyMeterTab() {
+            const tabsContainer = document.getElementById('navTabsContainer');
+            const contentContainer = document.getElementById('tabsContentContainer');
+            tabsContainer.innerHTML += '<button onclick="switchTab(\'tab-soft-ab-easy\')" id="btn-tab-soft-ab-easy" class="nav-tab">📋 小支軟水A/B（新版抄表）</button>';
+            const options = dates.map((dStr, idx) => '<option value="' + idx + '">' + dStr + '</option>').join('');
+            contentContainer.innerHTML += '<div id="tab-soft-ab-easy" class="tab-content bg-white p-4 rounded-b-lg rounded-tr-lg shadow-sm border border-gray-200 border-t-0">' +
+                '<div class="mb-4"><h2 class="text-xl font-bold text-blue-800">📌 小支軟水A/B（新版抄表）</h2>' +
+                '<p class="text-sm text-gray-600 mt-2 leading-relaxed">給現場試用。控制器只看得到正在供水的那一桶：點 A 或 B，填剩餘噸數，系統對上一筆算出逆洗和用量，寫進跟舊版一樣的欄位。舊的「小支軟水A/B」分頁、QR Code 和計算都維持原樣，兩邊可以同時試。</p></div>' +
+                '<div class="max-w-md mx-auto md:mx-0 bg-gray-50 border border-gray-200 rounded-2xl p-4">' +
+                '<div class="mb-4 text-left"><label class="block text-sm font-bold text-gray-700 mb-1" for="adminEasyDate">📅 寫入日期（收尾抄表預設明天，用量算在前一天）</label>' +
+                '<select id="adminEasyDate" class="w-full p-3 rounded-lg border border-gray-300 font-semibold bg-white text-base">' + options + '</select></div>' +
+                easyFormInnerHtml('admin') +
+                '<button type="button" id="adminEasySubmit" class="w-full mt-4 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg shadow-lg transition-colors">確認無誤，送出寫入</button></div>' +
+                '<div class="max-w-md mx-auto md:mx-0 mt-6 text-sm text-gray-600 leading-relaxed">' +
+                '<p class="font-bold text-gray-800 mb-1">現場怎麼打開這個新版</p>' +
+                '<p>到「用量總表」按「列印 QR Code」，裁下標題是「小支軟水A/B（新版抄表）」的那張，貼在軟水機旁邊。也可以把下面的網址存進手機。</p>' +
+                '<p id="adminEasyUrl" class="mt-2 break-all font-mono text-xs bg-white border rounded p-2"></p>' +
+                '<button type="button" onclick="copyEasyMeterUrl()" class="mt-2 px-3 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-bold">複製網址</button>' +
+                '<img id="adminEasyQr" alt="新版抄表 QR Code" class="mt-3 w-36 h-36 border bg-white p-1 hidden"></div></div>';
+            const sel = document.getElementById('adminEasyDate');
+            sel.value = String(defaultEasyDateIndex());
+            sel.onchange = () => refreshEasyPreview('admin');
+            document.getElementById('adminEasySubmit').onclick = () => submitEasyFromPrefix('admin');
+            bindEasyRemain('admin');
+            paintEasyTanks('admin');
+            const urlEl = document.getElementById('adminEasyUrl');
+            if (urlEl) urlEl.textContent = easyMeterUrl();
+            refreshEasyPreview('admin');
+        }
+        function ensureEasyQrPreview() {
+            const img = document.getElementById('adminEasyQr');
+            if (!img || img.getAttribute('src')) return;
+            img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=' + encodeURIComponent(easyMeterUrl());
+            img.classList.remove('hidden');
+        }
+        function copyEasyMeterUrl() {
+            const url = easyMeterUrl();
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url).then(() => showToast('已複製新版抄表網址', 'success')).catch(() => showToast(url, 'success'));
+            } else {
+                showToast(url, 'success');
+            }
+        }
+        async function submitEasyFromPrefix(prefix) {
+            if (easyBusy) return;
+            const btn = document.getElementById(prefix === 'field' ? 'fieldSubmitBtn' : 'adminEasySubmit');
+            easyBusy = true;
+            try {
+                const view = await buildEasyView(prefix);
+                if (!view.canSubmit) {
+                    easyBusy = false;
+                    renderEasySummary(prefix, view);
+                    showToast('請先完成抄表內容', 'error');
+                    return;
+                }
+                renderEasySummary(prefix, view);
+                if (view.needsDoubleConfirm && !window.confirm(view.confirmText)) return;
+                if (SCRIPT_URL.includes('請將您部署後')) { showToast('系統未設定 API 網址！', 'error'); return; }
+                if (btn) { btn.disabled = true; btn.innerText = '⏳ 雲端傳輸中...'; }
+                await postEasyFields(view.fields);
+                showToast('✅ 新版抄表已寫入', 'success');
+                easySidePick[prefix] = '';
+                const remain = document.getElementById(prefix + 'EasyRemain');
+                if (remain) remain.value = '';
+                paintEasyTanks(prefix);
+                easyBusy = false;
+                await refreshEasyPreview(prefix);
+            } catch (error) {
+                showToast('❌ 傳輸失敗。', 'error');
+                if (btn) { btn.disabled = false; btn.innerText = '確認無誤，送出寫入'; }
+            } finally {
+                easyBusy = false;
+            }
+        }
+
 
         function calcMasterTable() {
             const tbody = document.getElementById('masterTableBody');
